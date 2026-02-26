@@ -1,0 +1,81 @@
+{
+  "name": "boomergit",
+  "displayName": "BoomerGit",
+  "description": "Old man shakes stick at crap git integrations — native git graph visualization",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Visualization"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "boomergit",
+        "aliases": ["BoomerGit Graph"]
+      }
+    ],
+    "commands": [
+      {
+        "command": "boomergit.showGraph",
+        "title": "BoomerGit: Show Graph"
+      },
+      {
+        "command": "boomergit.checkoutRef",
+        "title": "Checkout Ref"
+      },
+      {
+        "command": "boomergit.deleteBranch",
+        "title": "Delete Branch"
+      },
+      {
+        "command": "boomergit.createBranch",
+        "title": "Create Branch"
+      },
+      {
+        "command": "boomergit.copyText",
+        "title": "Copy Text"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "boomergit.checkoutRef", "when": "false" },
+        { "command": "boomergit.deleteBranch", "when": "false" },
+        { "command": "boomergit.createBranch", "when": "false" },
+        { "command": "boomergit.copyText", "when": "false" }
+      ]
+    },
+    "configurationDefaults": {
+      "[boomergit]": {
+        "editor.lineHeight": 1.8,
+        "editor.contextmenu": false,
+        "editor.hover.above": false,
+        "editor.minimap.enabled": false,
+        "editor.scrollBeyondLastLine": false,
+        "editor.hover.delay": 100,
+        "editor.multiCursorModifier": "ctrlCmd",
+        "editor.cursorStyle": "underline-thin",
+        "editor.cursorBlinking": "solid",
+        "editor.cursorWidth": 0,
+        "editor.occurrencesHighlight": "off",
+        "editor.selectionHighlight": false,
+        "editor.renderLineHighlight": "none"
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.0"
+  }
+}
