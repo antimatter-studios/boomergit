@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>BoomerGit SVG Tile Test</title>
+  <style>
+    body { background:#1a1a1a; color:white; font-family:'SF Mono','Fira Code','Cascadia Code',monospace; padding:40px; max-width:1400px; }
+    h2 { color:#F5A623; border-bottom:2px solid #444; padding-bottom:12px; font-size:22px; }
+  </style>
+</head>
+<body>
+<h2>BoomerGit — Graph Layout Visual Test</h2>
+<p style="color:#888;font-size:13px;">Real layout algorithm output at 2.5x scale. Fork/merge curves connect directly to commit dots.</p>
+
+
+  <div style="margin-bottom:60px;">
+    <h3 style="color:#eee;margin-bottom:4px;font-size:16px;">1. Simple Feature Branch</h3>
+    <p style="color:#888;margin-top:0;font-size:13px;">Branch off main → 2 commits → merge back. Curves should connect directly to the orange merge dots.</p>
+    <div style="display:flex;flex-direction:column;gap:0;border:1px solid #444;border-radius:8px;padding:12px 16px;width:fit-content;background:#2d2d2d;">
+    <div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="150" height="60" viewBox="0 0 150 60">
+<path d="M25,30 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">a1</b> latest on main</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">↓0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="150" height="60" viewBox="0 0 150 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">a2</b> Merge feat into main</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 0⤵1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="150" height="60" viewBox="0 0 150 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">a3</b> feat: second commit</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="150" height="60" viewBox="0 0 150 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">a4</b> feat: first commit</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="150" height="60" viewBox="0 0 150 60">
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">a5</b> main before branch</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">1→0 │0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="150" height="60" viewBox="0 0 150 60">
+<path d="M25,0 L25,30" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,30" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">a6</b> initial commit</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">↑0</span>
+  </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:60px;">
+    <h3 style="color:#eee;margin-bottom:4px;font-size:16px;">2. Two Feature Branches</h3>
+    <p style="color:#888;margin-top:0;font-size:13px;">feat-a and feat-b fork from different points, merge back sequentially.</p>
+    <div style="display:flex;flex-direction:column;gap:0;border:1px solid #444;border-radius:8px;padding:12px 16px;width:fit-content;background:#2d2d2d;">
+    <div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,30 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">b01</b> main: latest</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">↓0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">b02</b> Merge feat-b</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 0⤵1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">b03</b> feat-b: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">b04</b> feat-b: start</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 125,45 125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 125,45 125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">b05</b> Merge feat-a</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │0 0⤵2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="125" cy="30" r="12.5" fill="#81C784" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#81C784">b06</b> feat-a: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">b07</b> main: before branches</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">1→0 2→0 │0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,30" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,30" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">b08</b> initial</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">↑0</span>
+  </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:60px;">
+    <h3 style="color:#eee;margin-bottom:4px;font-size:16px;">3. Six Branches — Staggered</h3>
+    <p style="color:#888;margin-top:0;font-size:13px;">auth, ui, api, hotfix, release. Tests column reuse and wide merges.</p>
+    <div style="display:flex;flex-direction:column;gap:0;border:1px solid #444;border-radius:8px;padding:12px 16px;width:fit-content;background:#2d2d2d;">
+    <div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M25,30 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">c01</b> main: tip</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">↓0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">c02</b> Merge release</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 0⤵1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 125,45 125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 125,45 125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">c03</b> Merge hotfix</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │0 0⤵2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 175,45 175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 175,45 175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">c04</b> Merge feat-api</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 │0 0⤵3</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 225,45 225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 225,45 225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">c05</b> Merge feat-ui</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 │3 │0 0⤵4</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 275,45 275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 275,45 275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">c06</b> Merge feat-auth</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 │3 │4 │0 0⤵5</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="225" cy="30" r="12.5" fill="#BA68C8" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#BA68C8">c07</b> feat-ui: commit 2</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2 │3 │5 │4</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="175" cy="30" r="12.5" fill="#E57373" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#E57373">c08</b> feat-api: commit 2</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2 │4 │5 │3</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="125" cy="30" r="12.5" fill="#81C784" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#81C784">c09</b> hotfix: urgent fix</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │3 │4 │5 │2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">c10</b> release: prep</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │2 │3 │4 │5 │1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 C225,21 175,21 175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 C225,21 175,21 175,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="175" cy="30" r="12.5" fill="#E57373" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#E57373">c11</b> shared parent commit</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2 │5 4→3 │3</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="275" cy="30" r="12.5" fill="#FFD54F" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#FFD54F">c12</b> feat-auth: commit 1</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2 │3 │5</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 C175,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 C275,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 C175,21 25,21 25,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 C275,21 25,21 25,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">c13</b> main: old commit</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 2→0 3→0 5→0 │0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="350" height="60" viewBox="0 0 350 60">
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,30" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,30" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">c14</b> initial</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">1→0 ↑0</span>
+  </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:60px;">
+    <h3 style="color:#eee;margin-bottom:4px;font-size:16px;">4. Octopus Merge (4 Parents)</h3>
+    <p style="color:#888;margin-top:0;font-size:13px;">Three branches merged in one commit. Three fork curves from one dot.</p>
+    <div style="display:flex;flex-direction:column;gap:0;border:1px solid #444;border-radius:8px;padding:12px 16px;width:fit-content;background:#2d2d2d;">
+    <div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,30 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">d1</b> main: after octopus</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">↓0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 125,45 125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 175,45 175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 125,45 125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 175,45 175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">d2</b> Octopus merge</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 0⤵1 0⤵2 0⤵3</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">d3</b> feat-a: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │2 │3 │1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="125" cy="30" r="12.5" fill="#81C784" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#81C784">d4</b> feat-b: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │3 │2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="175" cy="30" r="12.5" fill="#E57373" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#E57373">d5</b> feat-c: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2 │3</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 C175,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 C175,21 25,21 25,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">d6</b> main: before octopus</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">1→0 2→0 3→0 │0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,0 L25,30" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,30" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">d7</b> initial</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">↑0</span>
+  </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:60px;">
+    <h3 style="color:#eee;margin-bottom:4px;font-size:16px;">5. Cross-Merge</h3>
+    <p style="color:#888;margin-top:0;font-size:13px;">feat-b merges feat-a into itself, then merges into main.</p>
+    <div style="display:flex;flex-direction:column;gap:0;border:1px solid #444;border-radius:8px;padding:12px 16px;width:fit-content;background:#2d2d2d;">
+    <div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,30 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">e01</b> main: tip</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">↓0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">e02</b> Merge feat-b into main</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 0⤵1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,30 C75,45 125,45 125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,30 C75,45 125,45 125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">e04</b> feat-b: merge feat-a</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 1⤵2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">e05</b> feat-b: own work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │2 │1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="125" cy="30" r="12.5" fill="#81C784" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#81C784">e06</b> feat-a: latest</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">e03</b> main: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 │0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="125" cy="30" r="12.5" fill="#81C784" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#81C784">e07</b> feat-a: initial</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,30" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,30" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">e08</b> initial</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">1→0 2→0 ↑0</span>
+  </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:60px;">
+    <h3 style="color:#eee;margin-bottom:4px;font-size:16px;">6. Dense Monorepo — 6 Sequential Forks</h3>
+    <p style="color:#888;margin-top:0;font-size:13px;">Six branches all fork from main, merge back one by one. Peak 7 columns.</p>
+    <div style="display:flex;flex-direction:column;gap:0;border:1px solid #444;border-radius:8px;padding:12px 16px;width:fit-content;background:#2d2d2d;">
+    <div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M25,30 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">f01</b> main: tip</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">↓0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">f02</b> Merge infra</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 0⤵1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 125,45 125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 125,45 125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">f03</b> Merge docs</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │0 0⤵2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 175,45 175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 175,45 175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">f04</b> Merge perf</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 │0 0⤵3</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 225,45 225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 225,45 225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">f05</b> Merge api</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 │3 │0 0⤵4</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 275,45 275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 275,45 275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">f06</b> Merge ui</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 │3 │4 │0 0⤵5</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 325,45 325,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 325,45 325,60" fill="none" stroke="#4DD0E1" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">f07</b> Merge auth</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 │3 │4 │5 │0 0⤵6</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#4DD0E1" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">f08</b> main: work 2</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 │3 │4 │5 │6 │0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#4DD0E1" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">f09</b> main: work 1</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 │3 │4 │5 │6 │0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#4DD0E1" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">f10</b> main: old</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 │3 │4 │5 │6 │0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#4DD0E1" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="325" cy="30" r="12.5" fill="#4DD0E1" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4DD0E1">f11</b> auth: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2 │3 │4 │5 │6</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#4DD0E1" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="275" cy="30" r="12.5" fill="#FFD54F" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#FFD54F">f12</b> ui: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2 │3 │4 │6 │5</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#4DD0E1" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="225" cy="30" r="12.5" fill="#BA68C8" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#BA68C8">f13</b> api: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2 │3 │5 │6 │4</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#4DD0E1" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="175" cy="30" r="12.5" fill="#E57373" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#E57373">f14</b> perf: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2 │4 │5 │6 │3</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#4DD0E1" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="125" cy="30" r="12.5" fill="#81C784" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#81C784">f15</b> docs: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │3 │4 │5 │6 │2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 L225,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 L275,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M325,0 L325,60" fill="none" stroke="#4DD0E1" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">f16</b> infra: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │2 │3 │4 │5 │6 │1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60">
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 C175,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M225,0 C225,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M275,0 C275,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M325,0 C325,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,30" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 C175,21 25,21 25,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M225,0 C225,21 25,21 25,60" fill="none" stroke="#BA68C8" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M275,0 C275,21 25,21 25,60" fill="none" stroke="#FFD54F" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M325,0 C325,21 25,21 25,60" fill="none" stroke="#4DD0E1" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,30" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">f17</b> initial</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">1→0 2→0 3→0 4→0 5→0 6→0 ↑0</span>
+  </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:60px;">
+    <h3 style="color:#eee;margin-bottom:4px;font-size:16px;">7. Bidirectional Merges</h3>
+    <p style="color:#888;margin-top:0;font-size:13px;">main and develop merge into each other repeatedly.</p>
+    <div style="display:flex;flex-direction:column;gap:0;border:1px solid #444;border-radius:8px;padding:12px 16px;width:fit-content;background:#2d2d2d;">
+    <div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,30 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">g01</b> main: latest</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">↓0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">g02</b> Merge develop</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 0⤵1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,30 C75,45 125,45 125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,30 C75,45 125,45 125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">g04</b> develop: merge main</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 1⤵2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="125" cy="30" r="12.5" fill="#81C784" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#81C784">g06</b> main: hotfix</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">g05</b> develop: feature 3</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │2 │1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">g03</b> main: after first merge</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 │0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 125,45 125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 125,45 125,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">g07</b> Merge develop (first)</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│1 │2 2→0 │0 0⤵2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="125" cy="30" r="12.5" fill="#E57373" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#E57373">g09</b> develop: feature 2</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">g08</b> main: early work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│2 1→0 │0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">g10</b> develop: feature 1</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">2→0 │0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+<path d="M25,0 L25,30" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,30" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">g11</b> initial</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">↑0</span>
+  </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:60px;">
+    <h3 style="color:#eee;margin-bottom:4px;font-size:16px;">8. Nested Branches (3 Deep)</h3>
+    <p style="color:#888;margin-top:0;font-size:13px;">Branch off a branch off a branch.</p>
+    <div style="display:flex;flex-direction:column;gap:0;border:1px solid #444;border-radius:8px;padding:12px 16px;width:fit-content;background:#2d2d2d;">
+    <div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,30 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">h01</b> main: tip</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">↓0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,30 C25,45 75,45 75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">h02</b> Merge feat-a</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 0⤵1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,30 C75,45 125,45 125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,30 C75,45 125,45 125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">h03</b> feat-a: merge sub-feat</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 1⤵2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="125" cy="30" r="12.5" fill="#81C784" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#81C784">h05</b> sub-feat: merge sub-sub</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="75" cy="30" r="12.5" fill="#4FC3F7" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#4FC3F7">h04</b> feat-a: own work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │2 │1</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,30 C125,45 175,45 175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,30 C125,45 175,45 175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="125" cy="30" r="12.5" fill="#81C784" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#81C784">h07</b> sub-feat: work (merge)</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2 2⤵3</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="175" cy="30" r="12.5" fill="#E57373" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#E57373">h09</b> sub-sub-feat: work</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │2 │3</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 L75,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="125" cy="30" r="12.5" fill="#81C784" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#81C784">h08</b> sub-feat: base</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│0 │1 │3 │2</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M125,0 L125,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 L125,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 L175,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M75,0 C75,21 25,21 25,60" fill="none" stroke="#4FC3F7" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,60" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">h06</b> main: before branch</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">│2 │3 1→0 │0</span>
+  </div>
+<div style="display:flex;align-items:center;height:60px;margin:0;padding:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="250" height="60" viewBox="0 0 250 60">
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M175,0 C175,21 25,21 25,60" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M25,0 L25,30" fill="none" stroke="#2d2d2d" stroke-width="12.5" stroke-opacity="0.6" stroke-linecap="round"/>
+<path d="M125,0 C125,21 25,21 25,60" fill="none" stroke="#81C784" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M175,0 C175,21 25,21 25,60" fill="none" stroke="#E57373" stroke-width="6.25" stroke-linecap="round"/>
+<path d="M25,0 L25,30" fill="none" stroke="#F5A623" stroke-width="6.25" stroke-linecap="round"/>
+<circle cx="25" cy="30" r="12.5" fill="#F5A623" stroke="#2d2d2d" stroke-width="5" stroke-opacity="0.8"/>
+</svg>
+    <span style="color:#bbb;font-size:13px;margin-left:16px;white-space:nowrap"><b style="color:#F5A623">h10</b> initial</span>
+    <span style="color:#555;font-size:10px;margin-left:16px;white-space:nowrap">2→0 3→0 ↑0</span>
+  </div>
+    </div>
+  </div>
+
+</body>
+</html>
