@@ -1,5 +1,7 @@
 # BoomerGit
 
+![BoomerGit](docs/boomergit.png)
+
 **Old man shakes stick at crap git integrations.**
 
 BoomerGit is a VS Code extension for native git graph visualization. No webviews. No bloat. No nonsense. Just a clean, fast git graph rendered entirely with native VS Code APIs.
