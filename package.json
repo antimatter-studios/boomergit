@@ -13,6 +13,24 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "boomergit-panel",
+          "title": "BoomerGit",
+          "icon": "resources/boomergit-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "boomergit-panel": [
+        {
+          "id": "boomergit.commitDetail",
+          "name": "Commit Details",
+          "when": "boomergit:graphOpen"
+        }
+      ]
+    },
     "languages": [
       {
         "id": "boomergit",

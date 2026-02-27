@@ -3,7 +3,9 @@ import { execFile } from "node:child_process";
 import { parseGitLog } from "./git/parser.js";
 import { computeGraphLayout } from "./graph/layout.js";
 import { GitGraphProvider } from "./providers/gitGraphProvider.js";
+import type { Commit } from "./git/types.js";
 import { GraphDecorationEngine } from "./decorations/graphDecorations.js";
+import { CommitDetailProvider } from "./providers/commitDetailProvider.js";
 
 const SCHEME = "boomergit";
 
@@ -20,6 +22,12 @@ export function activate(context: vscode.ExtensionContext) {
   const merged = { ...colors, ...hoverColors };
   wbConfig.update("colorCustomizations", merged, vscode.ConfigurationTarget.Global);
 
+  const commitDetailProvider = new CommitDetailProvider();
+  const commitDetailView = vscode.window.createTreeView("boomergit.commitDetail", {
+    treeDataProvider: commitDetailProvider,
+    showCollapseAll: true,
+  });
+
   const providerReg = vscode.workspace.registerTextDocumentContentProvider(
     SCHEME,
     graphProvider
@@ -31,16 +39,43 @@ export function activate(context: vscode.ExtensionContext) {
   // Left-click → toggle hover menu; Cmd-click → select rows for compare
   let lastHoverKey: string | undefined;
   let hoverTriggeredByClick = false;
-  let ignoreNextSelection = false;
+  // Timestamp-based ignore: avoids boolean flag races where a real click gets eaten
+  let ignoreSelectionUntil = 0;
+
+  function resetCursor(editor: vscode.TextEditor, pos: vscode.Position, delayMs = 0): void {
+    const doReset = () => {
+      if (editor.document.uri.scheme !== SCHEME) return;
+      const lineLen = editor.document.lineAt(pos.line).text.length;
+      const resetCol = pos.character === 0 ? lineLen : 0;
+      ignoreSelectionUntil = Date.now() + 200;
+      editor.selection = new vscode.Selection(pos.line, resetCol, pos.line, resetCol);
+    };
+    if (delayMs > 0) setTimeout(doReset, delayMs);
+    else doReset();
+  }
+
+  function showSidebar(commit: Commit): void {
+    if (!workspaceCwd) return;
+    commitDetailProvider.showCommit(commit, workspaceCwd);
+    // Reveal without stealing editor focus — just make the panel visible
+    if (!commitDetailView.visible) {
+      vscode.commands.executeCommand("boomergit.commitDetail.focus").then(() => {
+        // Return focus to the editor so subsequent clicks register
+        const editor = vscode.window.activeTextEditor;
+        if (!editor || editor.document.uri.scheme !== SCHEME) {
+          const uri = vscode.Uri.parse(`${SCHEME}:Git Graph`);
+          vscode.window.showTextDocument(uri, { viewColumn: vscode.ViewColumn.One, preserveFocus: false });
+        }
+      });
+    }
+  }
+
   const selectionWatcher = vscode.window.onDidChangeTextEditorSelection((e) => {
     if (e.textEditor.document.uri.scheme !== SCHEME || !decorationEngine) return;
     if (e.kind !== vscode.TextEditorSelectionChangeKind.Mouse) return;
 
-    // Ignore events we fire when resetting cursor position
-    if (ignoreNextSelection) {
-      ignoreNextSelection = false;
-      return;
-    }
+    // Ignore events from our own programmatic cursor resets
+    if (Date.now() < ignoreSelectionUntil) return;
 
     const isCmdClick = e.selections.length > 1;
     const pos = isCmdClick
@@ -49,7 +84,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Collapse multi-cursors back to single cursor
     if (isCmdClick) {
-      ignoreNextSelection = true;
+      ignoreSelectionUntil = Date.now() + 200;
       e.textEditor.selection = new vscode.Selection(pos, pos);
     }
 
@@ -78,6 +113,7 @@ export function activate(context: vscode.ExtensionContext) {
       // Cmd-click: add row to selection, open menu on it
       lastHoverKey = undefined;
       decorationEngine.selectRow(e.textEditor, pos.line);
+      showSidebar(commit);
       showingMenu = true;
       setTimeout(() => {
         hoverTriggeredByClick = true;
@@ -87,10 +123,12 @@ export function activate(context: vscode.ExtensionContext) {
       // Plain click while rows are selected → dismiss everything
       lastHoverKey = undefined;
       decorationEngine.clearSelections(e.textEditor);
+      commitDetailProvider.clear();
     } else {
       // Plain click, nothing selected → select row and open menu
       lastHoverKey = undefined;
       decorationEngine.selectRow(e.textEditor, pos.line);
+      showSidebar(commit);
       showingMenu = true;
       setTimeout(() => {
         hoverTriggeredByClick = true;
@@ -98,12 +136,10 @@ export function activate(context: vscode.ExtensionContext) {
       }, 50);
     }
 
-    // Reset cursor so next click anywhere registers — skip when showing menu
-    if (!isCmdClick && !showingMenu) {
-      const lineLen = e.textEditor.document.lineAt(pos.line).text.length;
-      const resetCol = pos.character === 0 ? lineLen : 0;
-      ignoreNextSelection = true;
-      e.textEditor.selection = new vscode.Selection(pos.line, resetCol, pos.line, resetCol);
+    // Always reset cursor so the next click at the same spot still fires.
+    // Delay when showing a menu so the hover appears at the right position first.
+    if (!isCmdClick) {
+      resetCursor(e.textEditor, pos, showingMenu ? 250 : 0);
     }
   });
 
@@ -208,6 +244,8 @@ export function activate(context: vscode.ExtensionContext) {
         preview: false,
         viewColumn: vscode.ViewColumn.One,
       });
+
+      vscode.commands.executeCommand("setContext", "boomergit:graphOpen", true);
 
       decorationEngine?.dispose();
       decorationEngine = new GraphDecorationEngine(storageDir);
@@ -318,8 +356,11 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     providerReg, showGraphCmd, checkoutRefCmd, deleteBranchCmd, createBranchCmd, copyTextCmd, hoverProvider, selectionWatcher,
+    commitDetailView,
     { dispose: () => decorationEngine?.dispose() },
   );
 }
 
-export function deactivate() {}
+export function deactivate() {
+  vscode.commands.executeCommand("setContext", "boomergit:graphOpen", false);
+}
