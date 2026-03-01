@@ -89,6 +89,7 @@ export class CommitDetailProvider implements vscode.TreeDataProvider<vscode.Tree
     this.fullMessage = message;
     this.files = files;
     this.filesSection.label = `Changed Files (${files.length})`;
+    console.log(`[boomergit] showCommit done: hash=${commit.hash.slice(0, 8)} files=${files.length} msg=${message.slice(0, 60)}`);
     this._onDidChangeTreeData.fire();
   }
 

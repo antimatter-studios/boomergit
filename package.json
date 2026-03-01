@@ -2,7 +2,13 @@
   "name": "boomergit",
   "displayName": "BoomerGit",
   "description": "Old man shakes stick at crap git integrations — native git graph visualization",
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "publisher": "ChristopherThomas",
+  "icon": "resources/old_man_yells_at_git_256.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/antimatter-studios/boomergit"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -34,7 +40,9 @@
     "languages": [
       {
         "id": "boomergit",
-        "aliases": ["BoomerGit Graph"]
+        "aliases": [
+          "BoomerGit Graph"
+        ]
       }
     ],
     "commands": [
@@ -61,10 +69,22 @@
     ],
     "menus": {
       "commandPalette": [
-        { "command": "boomergit.checkoutRef", "when": "false" },
-        { "command": "boomergit.deleteBranch", "when": "false" },
-        { "command": "boomergit.createBranch", "when": "false" },
-        { "command": "boomergit.copyText", "when": "false" }
+        {
+          "command": "boomergit.checkoutRef",
+          "when": "false"
+        },
+        {
+          "command": "boomergit.deleteBranch",
+          "when": "false"
+        },
+        {
+          "command": "boomergit.createBranch",
+          "when": "false"
+        },
+        {
+          "command": "boomergit.copyText",
+          "when": "false"
+        }
       ]
     },
     "configurationDefaults": {
@@ -88,12 +108,21 @@
   "scripts": {
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "package": "npm run build && vsce package --out build/",
+    "publish:vscode": "vsce publish --packagePath build/boomergit-*.vsix",
+    "publish:openvsx": "ovsx publish build/boomergit-*.vsix",
+    "publish:all": "npm run publish:vscode && npm run publish:openvsx",
+    "release:patch": "npm version patch && npm run package && npm run publish:all",
+    "release:minor": "npm version minor && npm run package && npm run publish:all",
+    "release:major": "npm version major && npm run package && npm run publish:all"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.20.0",
+    "ovsx": "^0.10.9",
     "typescript": "^5.3.0"
   }
 }

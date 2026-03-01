@@ -4,6 +4,10 @@
 
 **Old man shakes stick at crap git integrations.**
 
+> This is an early release. BoomerGit is a real tool built for real developers — not a Swiss army knife stuffed with buttons nobody knows what they do. Features get added when there's an actual need for them, not to pad a feature list.
+>
+> If there's something you want to see, [open an issue](https://github.com/antimatter-studios/boomergit/issues). That's how this grows — from demand, not guesswork.
+
 BoomerGit is a VS Code extension for native git graph visualization. No webviews. No bloat. No nonsense. Just a clean, fast git graph rendered entirely with native VS Code APIs.
 
 ## Why?
