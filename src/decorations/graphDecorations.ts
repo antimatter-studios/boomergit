@@ -304,6 +304,17 @@ export class GraphDecorationEngine {
     this.selectionDecos = [];
   }
 
+  /** Returns the total number of rows (commits) in the graph */
+  getTotalRows(): number {
+    return this.commits.length;
+  }
+
+  /** Clear selections, select a single target line, and apply decorations */
+  navigateTo(editor: vscode.TextEditor, line: number): void {
+    this.selectedRows = [line];
+    this.applySelectionDecos(editor);
+  }
+
   clearDecorations(): void {
     for (const dt of this.decorationTypes) {
       dt.dispose();

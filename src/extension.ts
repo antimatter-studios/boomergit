@@ -5,7 +5,9 @@ import { computeGraphLayout } from "./graph/layout.js";
 import { GitGraphProvider } from "./providers/gitGraphProvider.js";
 import type { Commit } from "./git/types.js";
 import { GraphDecorationEngine } from "./decorations/graphDecorations.js";
-import { CommitDetailProvider } from "./providers/commitDetailProvider.js";
+import { CommitInfoProvider, ChangedFilesProvider } from "./providers/commitDetailProvider.js";
+import type { ChangedFile } from "./providers/commitDetailProvider.js";
+import { GitFileContentProvider, FILE_SCHEME, fileUri } from "./providers/gitFileContentProvider.js";
 
 const SCHEME = "boomergit";
 
@@ -22,9 +24,12 @@ export function activate(context: vscode.ExtensionContext) {
   const merged = { ...colors, ...hoverColors };
   wbConfig.update("colorCustomizations", merged, vscode.ConfigurationTarget.Global);
 
-  const commitDetailProvider = new CommitDetailProvider();
-  const commitDetailView = vscode.window.createTreeView("boomergit.commitDetail", {
-    treeDataProvider: commitDetailProvider,
+  const commitInfoProvider = new CommitInfoProvider();
+  const commitInfoReg = vscode.window.registerWebviewViewProvider("boomergit.commitInfo", commitInfoProvider);
+
+  const changedFilesProvider = new ChangedFilesProvider();
+  const changedFilesView = vscode.window.createTreeView("boomergit.changedFiles", {
+    treeDataProvider: changedFilesProvider,
     showCollapseAll: true,
   });
 
@@ -33,9 +38,30 @@ export function activate(context: vscode.ExtensionContext) {
     graphProvider
   );
 
+  const fileProviderReg = vscode.workspace.registerTextDocumentContentProvider(
+    FILE_SCHEME,
+    new GitFileContentProvider()
+  );
+
+  // Sidebar icon: auto-open graph when the view becomes visible
+  const emptyTreeProvider: vscode.TreeDataProvider<never> = {
+    getTreeItem: () => { throw new Error("no items"); },
+    getChildren: () => [],
+  };
+  const sidebarView = vscode.window.createTreeView("boomergit.welcome", {
+    treeDataProvider: emptyTreeProvider,
+  });
+  sidebarView.onDidChangeVisibility((e) => {
+    if (e.visible) {
+      vscode.commands.executeCommand("boomergit.showGraph");
+    }
+  });
+
   let decorationEngine: GraphDecorationEngine | undefined;
   let workspaceCwd: string | undefined;
   let currentBranch: string | undefined;
+  let lastRows: import("./graph/types.js").GraphRow[] | undefined;
+  let lastCommits: Commit[] | undefined;
   // Left-click → toggle hover menu; Cmd-click → select rows for compare
   let lastHoverKey: string | undefined;
   let hoverTriggeredByClick = false;
@@ -54,20 +80,11 @@ export function activate(context: vscode.ExtensionContext) {
     else doReset();
   }
 
-  function showSidebar(commit: Commit): void {
+  function showSidebar(commit: Commit, activeRefName?: string): void {
     if (!workspaceCwd) return;
-    commitDetailProvider.showCommit(commit, workspaceCwd);
-    // Reveal without stealing editor focus — just make the panel visible
-    if (!commitDetailView.visible) {
-      vscode.commands.executeCommand("boomergit.commitDetail.focus").then(() => {
-        // Return focus to the editor so subsequent clicks register
-        const editor = vscode.window.activeTextEditor;
-        if (!editor || editor.document.uri.scheme !== SCHEME) {
-          const uri = vscode.Uri.parse(`${SCHEME}:Git Graph`);
-          vscode.window.showTextDocument(uri, { viewColumn: vscode.ViewColumn.One, preserveFocus: false });
-        }
-      });
-    }
+    commitInfoProvider.showCommit(commit, workspaceCwd, activeRefName);
+    const parentHash = commit.parents[0] || "";
+    changedFilesProvider.showCommit(commit.hash, parentHash, commit.parents.length === 0, workspaceCwd);
   }
 
   const selectionWatcher = vscode.window.onDidChangeTextEditorSelection((e) => {
@@ -96,8 +113,9 @@ export function activate(context: vscode.ExtensionContext) {
     let showingMenu = false;
 
     if (refHit && !isCmdClick) {
-      // Badge click: clear selections, show badge menu
+      // Badge click: clear selections, show badge menu, update sidebar with this ref as title
       decorationEngine.clearSelections(e.textEditor);
+      showSidebar(commit, refHit.ref.name);
       const key = `ref:${pos.line}:${refHit.ref.name}`;
       if (lastHoverKey === key) {
         lastHoverKey = undefined;
@@ -123,7 +141,8 @@ export function activate(context: vscode.ExtensionContext) {
       // Plain click while rows are selected → dismiss everything
       lastHoverKey = undefined;
       decorationEngine.clearSelections(e.textEditor);
-      commitDetailProvider.clear();
+      commitInfoProvider.clear();
+      changedFilesProvider.clear();
     } else {
       // Plain click, nothing selected → select row and open menu
       lastHoverKey = undefined;
@@ -208,6 +227,15 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  // Re-apply decorations when VS Code recreates the graph editor instance (e.g. layout split)
+  const visibleEditorsWatcher = vscode.window.onDidChangeVisibleTextEditors((editors) => {
+    if (!decorationEngine || !lastRows || !lastCommits) return;
+    const graphEditor = editors.find((e) => e.document.uri.scheme === SCHEME);
+    if (graphEditor) {
+      decorationEngine.apply(graphEditor, lastRows, lastCommits, currentBranch);
+    }
+  });
+
   /** Re-read git log and refresh the graph view */
   async function refreshGraph() {
     if (!workspaceCwd) return;
@@ -247,9 +275,22 @@ export function activate(context: vscode.ExtensionContext) {
 
       vscode.commands.executeCommand("setContext", "boomergit:graphOpen", true);
 
+      lastRows = rows;
+      lastCommits = commits;
       decorationEngine?.dispose();
       decorationEngine = new GraphDecorationEngine(storageDir);
       decorationEngine.apply(editor, rows, commits, currentBranch);
+
+      // Auto-select the current branch commit and show its details
+      if (currentBranch) {
+        const idx = commits.findIndex((c) =>
+          c.refs.some((r) => r.type === "branch" && r.name === currentBranch)
+        );
+        if (idx >= 0) {
+          decorationEngine.selectRow(editor, idx);
+          showSidebar(commits[idx], currentBranch);
+        }
+      }
     } catch { /* silently fail on refresh */ }
   }
 
@@ -341,6 +382,40 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  const openFileDiffCmd = vscode.commands.registerCommand(
+    "boomergit.openFileDiff",
+    async (file: ChangedFile, commitHash: string, parentHash: string, cwd: string) => {
+      const leftRef = (file.status === "A" || !parentHash) ? "empty" : parentHash;
+      const rightRef = file.status === "D" ? "empty" : commitHash;
+      const leftPath = file.oldPath ?? file.path;
+      const rightPath = file.path;
+
+      const leftLabel = leftRef === "empty" ? "New File" : `Parent ${parentHash.slice(0, 8)}`;
+      const rightLabel = rightRef === "empty" ? "Deleted" : `Commit ${commitHash.slice(0, 8)}`;
+
+      const leftUri = fileUri(leftPath, leftRef, cwd, leftLabel);
+      const rightUri = fileUri(rightPath, rightRef, cwd, rightLabel);
+
+      const basename = rightPath.split("/").pop() || rightPath;
+      const title = `${basename} (${leftLabel} ↔ ${rightLabel})`;
+
+      const groups = vscode.window.tabGroups.all;
+      if (groups.length >= 2) {
+        // Bottom group already exists — open directly in it
+        await vscode.commands.executeCommand("vscode.diff", leftUri, rightUri, title, {
+          viewColumn: groups[1].viewColumn,
+          preview: false,
+        });
+      } else {
+        // First diff — open then split below
+        await vscode.commands.executeCommand("vscode.diff", leftUri, rightUri, title, {
+          preview: false,
+        });
+        await vscode.commands.executeCommand("workbench.action.moveEditorToBelowGroup");
+      }
+    }
+  );
+
   const showGraphCmd = vscode.commands.registerCommand(
     "boomergit.showGraph",
     async () => {
@@ -354,9 +429,40 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  const selectUpCmd = vscode.commands.registerCommand("boomergit.selectUp", () => {
+    if (!decorationEngine) return;
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.uri.scheme !== SCHEME) return;
+    const selected = decorationEngine.getSelectedRows();
+    if (selected.length !== 1) return;
+    const targetLine = Math.max(0, selected[0] - 1);
+    decorationEngine.navigateTo(editor, targetLine);
+    const commit = decorationEngine.getCommitAt(targetLine);
+    if (commit) showSidebar(commit);
+    ignoreSelectionUntil = Date.now() + 200;
+    editor.selection = new vscode.Selection(targetLine, 0, targetLine, 0);
+    editor.revealRange(new vscode.Range(targetLine, 0, targetLine, 0), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+  });
+
+  const selectDownCmd = vscode.commands.registerCommand("boomergit.selectDown", () => {
+    if (!decorationEngine) return;
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.uri.scheme !== SCHEME) return;
+    const selected = decorationEngine.getSelectedRows();
+    if (selected.length !== 1) return;
+    const maxLine = decorationEngine.getTotalRows() - 1;
+    const targetLine = Math.min(maxLine, selected[0] + 1);
+    decorationEngine.navigateTo(editor, targetLine);
+    const commit = decorationEngine.getCommitAt(targetLine);
+    if (commit) showSidebar(commit);
+    ignoreSelectionUntil = Date.now() + 200;
+    editor.selection = new vscode.Selection(targetLine, 0, targetLine, 0);
+    editor.revealRange(new vscode.Range(targetLine, 0, targetLine, 0), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+  });
+
   context.subscriptions.push(
-    providerReg, showGraphCmd, checkoutRefCmd, deleteBranchCmd, createBranchCmd, copyTextCmd, hoverProvider, selectionWatcher,
-    commitDetailView,
+    providerReg, fileProviderReg, sidebarView, showGraphCmd, checkoutRefCmd, deleteBranchCmd, createBranchCmd, copyTextCmd, hoverProvider, selectionWatcher,
+    commitInfoReg, changedFilesView, selectUpCmd, selectDownCmd, openFileDiffCmd, visibleEditorsWatcher,
     { dispose: () => decorationEngine?.dispose() },
   );
 }

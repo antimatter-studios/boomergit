@@ -87,6 +87,33 @@ Then press `F5` in VS Code to launch the extension in a development host.
 - VS Code 1.85.0 or later
 - Git installed and available on PATH
 
+## Changelog
+
+### v0.2.0 — 2026-03-01
+- File diff viewer: click a changed file to see parent-vs-commit diff
+- Diffs open as persistent tabs (no preview replacement)
+- Activity bar icon — click to auto-open graph
+- Commit Info and Changed Files moved to left sidebar
+- Auto-selects current checkout and shows its details on graph open
+- Arrow key navigation (up/down) when a row is selected
+- Tab title shows parent/commit hashes for diff context
+- Full commit message display with text wrapping
+
+### v0.1.0 — 2026-03-01
+- Commit detail sidebar with info panel (hash, author, date, message)
+- Changed files tree view with directory grouping
+- Marketplace publishing support (VS Code + Open VSX)
+
+### v0.0.1 — 2026-02-26
+- Initial release
+- Lane-based git graph visualization with SVG tile rendering
+- Ref badges for branches, tags, remotes, and HEAD
+- Click-to-select rows with context menus (create branch, copy hash, copy message)
+- Badge-specific menus (checkout, delete branch, copy ref name)
+- Active branch row highlighting
+- Git operations: checkout, create branch, delete branch
+- Auto-refresh after git operations
+
 ## License
 
 MIT

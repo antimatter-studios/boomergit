@@ -2,7 +2,7 @@
   "name": "boomergit",
   "displayName": "BoomerGit",
   "description": "Old man shakes stick at crap git integrations — native git graph visualization",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "ChristopherThomas",
   "icon": "resources/old_man_yells_at_git_256.png",
   "repository": {
@@ -19,20 +19,41 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
+    "resourceLabelFormatters": [
+      {
+        "scheme": "boomergit-file",
+        "formatting": {
+          "label": "${path} (${query.label})",
+          "separator": "/",
+          "stripPathStartingSeparator": true
+        }
+      }
+    ],
     "viewsContainers": {
-      "panel": [
+      "activitybar": [
         {
-          "id": "boomergit-panel",
+          "id": "boomergit-sidebar",
           "title": "BoomerGit",
           "icon": "resources/boomergit-icon.svg"
         }
       ]
     },
     "views": {
-      "boomergit-panel": [
+      "boomergit-sidebar": [
         {
-          "id": "boomergit.commitDetail",
-          "name": "Commit Details",
+          "id": "boomergit.welcome",
+          "name": "BoomerGit",
+          "when": "!boomergit:graphOpen"
+        },
+        {
+          "id": "boomergit.commitInfo",
+          "name": "Commit Info",
+          "type": "webview",
+          "when": "boomergit:graphOpen"
+        },
+        {
+          "id": "boomergit.changedFiles",
+          "name": "Changed Files",
           "when": "boomergit:graphOpen"
         }
       ]
@@ -65,6 +86,18 @@
       {
         "command": "boomergit.copyText",
         "title": "Copy Text"
+      },
+      {
+        "command": "boomergit.openFileDiff",
+        "title": "Show File Diff"
+      },
+      {
+        "command": "boomergit.selectUp",
+        "title": "Select Previous Row"
+      },
+      {
+        "command": "boomergit.selectDown",
+        "title": "Select Next Row"
       }
     ],
     "menus": {
@@ -84,9 +117,33 @@
         {
           "command": "boomergit.copyText",
           "when": "false"
+        },
+        {
+          "command": "boomergit.openFileDiff",
+          "when": "false"
+        },
+        {
+          "command": "boomergit.selectUp",
+          "when": "false"
+        },
+        {
+          "command": "boomergit.selectDown",
+          "when": "false"
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "boomergit.selectUp",
+        "key": "up",
+        "when": "resourceScheme == boomergit && editorTextFocus"
+      },
+      {
+        "command": "boomergit.selectDown",
+        "key": "down",
+        "when": "resourceScheme == boomergit && editorTextFocus"
+      }
+    ],
     "configurationDefaults": {
       "[boomergit]": {
         "editor.lineHeight": 1.8,
