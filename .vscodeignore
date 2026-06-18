@@ -2,8 +2,13 @@
 src/**
 docs/**
 node_modules/**
+.github/**
 .gitignore
+.gitattributes
+.env*
 .DS_Store
+CLAUDE.md
+AGENTS.md
 tsconfig.json
 esbuild.mjs
 test-*.mjs

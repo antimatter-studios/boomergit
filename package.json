@@ -166,7 +166,7 @@
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "lint": "tsc --noEmit",
-    "package": "npm run build && vsce package --out build/",
+    "package": "npm run build && mkdir -p build && vsce package --out build/",
     "publish:vscode": "vsce publish --packagePath build/boomergit-*.vsix",
     "publish:openvsx": "ovsx publish build/boomergit-*.vsix",
     "publish:all": "npm run publish:vscode && npm run publish:openvsx",
