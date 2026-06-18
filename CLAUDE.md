@@ -1,9 +1,10 @@
 # BoomerGit — Agent Instructions
 
 ## Publishing
-- When publishing a new release, you must remember to bump the version number. Decide whether it's a major, minor, or patch based on the changes.
-- Use `npm run release:patch`, `npm run release:minor`, or `npm run release:major` — these bump the version, build, package, and publish to both VS Code Marketplace and Open VSX in one step.
-- Never publish the same version twice. Always bump first.
+- Publishing is automated via GitHub Actions (`.github/workflows/release.yml`). It triggers on `v*` tag pushes and publishes to both VS Code Marketplace and Open VSX, then creates a GitHub Release.
+- To cut a release: decide major/minor/patch based on the changes, then run `npm run release:patch` / `release:minor` / `release:major`. These bump the version (commit + tag) and push with `--follow-tags`; CI does the build/package/publish.
+- Never publish the same version twice. Always bump first — the release job fails if the tag doesn't match `package.json`'s version.
+- Requires repo secrets `VSCE_PAT` (Azure DevOps PAT) and `OVSX_PAT` (Open VSX token).
 
 ## Build
 - `npm run build` — esbuild bundle

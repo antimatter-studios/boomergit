@@ -10,6 +10,8 @@ import type { ChangedFile } from "./providers/commitDetailProvider.js";
 import { GitFileContentProvider, FILE_SCHEME, fileUri } from "./providers/gitFileContentProvider.js";
 
 const SCHEME = "boomergit";
+const DISPLAY_NAME = "BoomerGit";
+const TITLE = `${DISPLAY_NAME} - Git Graph`;
 
 export function activate(context: vscode.ExtensionContext) {
   const graphProvider = new GitGraphProvider();
@@ -24,7 +26,29 @@ export function activate(context: vscode.ExtensionContext) {
   const merged = { ...colors, ...hoverColors };
   wbConfig.update("colorCustomizations", merged, vscode.ConfigurationTarget.Global);
 
-  const commitInfoProvider = new CommitInfoProvider();
+  // True when a graph editor tab exists anywhere (visible or background).
+  function isGraphEditorOpen(): boolean {
+    return vscode.window.tabGroups.all.some((g) =>
+      g.tabs.some((t) =>
+        t.input instanceof vscode.TabInputText && t.input.uri.scheme === SCHEME)
+    );
+  }
+
+  // Reopen the graph when a BoomerGit sidebar view becomes visible but the
+  // graph editor was closed. Guarded against concurrent re-entry because all
+  // three views can fire visibility at once when the sidebar is revealed.
+  let reopening = false;
+  async function maybeReopenGraph(visible: boolean): Promise<void> {
+    if (!visible || reopening || isGraphEditorOpen()) return;
+    reopening = true;
+    try {
+      await vscode.commands.executeCommand("boomergit.showGraph");
+    } finally {
+      reopening = false;
+    }
+  }
+
+  const commitInfoProvider = new CommitInfoProvider(() => maybeReopenGraph(true));
   const commitInfoReg = vscode.window.registerWebviewViewProvider("boomergit.commitInfo", commitInfoProvider);
 
   const changedFilesProvider = new ChangedFilesProvider();
@@ -51,11 +75,12 @@ export function activate(context: vscode.ExtensionContext) {
   const sidebarView = vscode.window.createTreeView("boomergit.welcome", {
     treeDataProvider: emptyTreeProvider,
   });
-  sidebarView.onDidChangeVisibility((e) => {
-    if (e.visible) {
-      vscode.commands.executeCommand("boomergit.showGraph");
-    }
-  });
+  sidebarView.onDidChangeVisibility((e) => maybeReopenGraph(e.visible));
+
+  // The welcome view is hidden once the graph is open, so also listen on the
+  // views that are visible in that state — this is what lets the sidebar icon
+  // reopen the graph after the editor tab was closed.
+  changedFilesView.onDidChangeVisibility((e) => maybeReopenGraph(e.visible));
 
   let decorationEngine: GraphDecorationEngine | undefined;
   let workspaceCwd: string | undefined;
@@ -236,6 +261,19 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
+  // When the graph editor tab is closed, tear down the live state so the sidebar
+  // reflects "no graph" and a later reopen rebuilds cleanly.
+  const tabCloseWatcher = vscode.window.tabGroups.onDidChangeTabs(() => {
+    if (!decorationEngine || isGraphEditorOpen()) return;
+    decorationEngine.dispose();
+    decorationEngine = undefined;
+    lastRows = undefined;
+    lastCommits = undefined;
+    lastHoverKey = undefined;
+    commitInfoProvider.clear();
+    changedFilesProvider.clear();
+  });
+
   /** Re-read git log and refresh the graph view */
   async function refreshGraph() {
     if (!workspaceCwd) return;
@@ -250,7 +288,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       const rows = computeGraphLayout(commits);
 
-      const uri = vscode.Uri.parse(`${SCHEME}:Git Graph`);
+      const uri = vscode.Uri.parse(`${SCHEME}:${TITLE}`);
       graphProvider.setCommits(commits);
       graphProvider.refresh(uri);
 
@@ -421,7 +459,7 @@ export function activate(context: vscode.ExtensionContext) {
     async () => {
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (!workspaceFolder) {
-        vscode.window.showErrorMessage("BoomerGit: No workspace folder open.");
+        vscode.window.showErrorMessage(`${DISPLAY_NAME}: No workspace folder open.`);
         return;
       }
       workspaceCwd = workspaceFolder.uri.fsPath;
@@ -462,7 +500,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     providerReg, fileProviderReg, sidebarView, showGraphCmd, checkoutRefCmd, deleteBranchCmd, createBranchCmd, copyTextCmd, hoverProvider, selectionWatcher,
-    commitInfoReg, changedFilesView, selectUpCmd, selectDownCmd, openFileDiffCmd, visibleEditorsWatcher,
+    commitInfoReg, changedFilesView, selectUpCmd, selectDownCmd, openFileDiffCmd, visibleEditorsWatcher, tabCloseWatcher,
     { dispose: () => decorationEngine?.dispose() },
   );
 }
