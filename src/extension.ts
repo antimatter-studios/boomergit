@@ -95,7 +95,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Refresh state: guard against overlapping refreshes; auto-refresh is opt-in.
   let refreshing = false;
-  let refreshDebounce: ReturnType<typeof setTimeout> | undefined;
+  let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
+  let lastRefSig: string | undefined;
   let autoRefreshEnabled = vscode.workspace.getConfiguration("boomergit").get<boolean>("autoRefresh", false);
 
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -337,48 +338,69 @@ export function activate(context: vscode.ExtensionContext) {
 
       const doc = await vscode.workspace.openTextDocument(uri);
       await vscode.languages.setTextDocumentLanguage(doc, "boomergit");
-      const editor = await vscode.window.showTextDocument(doc, {
-        preview: false,
-        viewColumn: vscode.ViewColumn.One,
-        preserveFocus: opts.preserveView === true,
-      });
-
-      vscode.commands.executeCommand("setContext", "boomergit:graphOpen", true);
 
       lastRows = rows;
       lastCommits = commits;
       decorationEngine?.dispose();
       decorationEngine = new GraphDecorationEngine(storageDir);
-      decorationEngine.apply(editor, rows, commits, currentBranch);
 
-      // Restore the previously selected commit if it still exists, otherwise
-      // auto-select the current branch commit and show its details.
-      let restored = false;
-      if (opts.preserveView && prevSelectedHash) {
-        const idx = commits.findIndex((c) => c.hash === prevSelectedHash);
-        if (idx >= 0) {
-          decorationEngine.selectRow(editor, idx);
-          showSidebar(commits[idx]);
-          restored = true;
-        }
-      }
-      if (!restored && currentBranch) {
-        const idx = commits.findIndex((c) =>
-          c.refs.some((r) => r.type === "branch" && r.name === currentBranch)
+      // Get the graph editor WITHOUT stealing focus or pulling its tab to the
+      // front. Only the initial open actively shows it. A refresh just
+      // decorates it if it's already visible; if the user is on another tab,
+      // the content + state are updated silently and the visible-editors
+      // watcher re-applies decorations when they switch back — so a background
+      // refresh never interrupts what they're doing.
+      let editor: vscode.TextEditor | undefined;
+      if (opts.preserveView) {
+        editor = vscode.window.visibleTextEditors.find(
+          (e) => e.document.uri.toString() === uri.toString()
         );
-        if (idx >= 0) {
-          decorationEngine.selectRow(editor, idx);
-          showSidebar(commits[idx], currentBranch);
-        }
+      } else {
+        editor = await vscode.window.showTextDocument(doc, {
+          preview: false,
+          viewColumn: vscode.ViewColumn.One,
+        });
+        vscode.commands.executeCommand("setContext", "boomergit:graphOpen", true);
       }
 
-      // Restore scroll position on a preserve-view refresh.
-      if (opts.preserveView && prevTopLine !== undefined) {
-        const line = Math.min(prevTopLine, editor.document.lineCount - 1);
-        editor.revealRange(new vscode.Range(line, 0, line, 0), vscode.TextEditorRevealType.AtTop);
+      if (editor) {
+        decorationEngine.apply(editor, rows, commits, currentBranch);
+
+        // Restore the previously selected commit if it still exists, otherwise
+        // auto-select the current branch commit and show its details.
+        let restored = false;
+        if (opts.preserveView && prevSelectedHash) {
+          const idx = commits.findIndex((c) => c.hash === prevSelectedHash);
+          if (idx >= 0) {
+            decorationEngine.selectRow(editor, idx);
+            showSidebar(commits[idx]);
+            restored = true;
+          }
+        }
+        if (!restored && currentBranch) {
+          const idx = commits.findIndex((c) =>
+            c.refs.some((r) => r.type === "branch" && r.name === currentBranch)
+          );
+          if (idx >= 0) {
+            decorationEngine.selectRow(editor, idx);
+            showSidebar(commits[idx], currentBranch);
+          }
+        }
+
+        // Restore scroll position on a preserve-view refresh.
+        if (opts.preserveView && prevTopLine !== undefined) {
+          const line = Math.min(prevTopLine, editor.document.lineCount - 1);
+          editor.revealRange(new vscode.Range(line, 0, line, 0), vscode.TextEditorRevealType.AtTop);
+        }
       }
 
       updateStatusBar();
+      // Align the baseline with what's now rendered BEFORE the finally releases
+      // the `refreshing` guard — otherwise a git event firing in that gap could
+      // compare against the stale pre-refresh signature and fire a redundant
+      // refresh.
+      const sig = await getRefSignature();
+      if (sig) lastRefSig = sig;
     } catch { /* silently fail on refresh */ }
     finally { refreshing = false; }
   }
@@ -543,26 +565,64 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // Change-driven auto-refresh: watch .git for ref/HEAD changes (objects are
-  // excluded by VS Code's default watcher excludes). Debounced; only when the
-  // graph is open and auto-refresh is enabled.
-  let gitWatcher: vscode.FileSystemWatcher | undefined;
-  const wsFolder = vscode.workspace.workspaceFolders?.[0];
-  if (wsFolder) {
-    gitWatcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(wsFolder, ".git/**")
-    );
-    const relevant = /\/(HEAD|ORIG_HEAD|packed-refs)$|\/refs\//;
-    const onGitChange = (changed: vscode.Uri) => {
-      if (!autoRefreshEnabled || !isGraphEditorOpen()) return;
-      if (!relevant.test(changed.path)) return;
-      if (refreshDebounce) clearTimeout(refreshDebounce);
-      refreshDebounce = setTimeout(() => refreshGraph({ preserveView: true }), 600);
-    };
-    gitWatcher.onDidChange(onGitChange);
-    gitWatcher.onDidCreate(onGitChange);
-    gitWatcher.onDidDelete(onGitChange);
+  // A cheap signature of all ref OIDs + HEAD. Refs cover commits/rebase/fetch/
+  // merge/branch+tag ops; HEAD covers checkout. Used to dedupe refresh triggers
+  // so we only do the real (expensive) refresh when refs actually moved.
+  function getRefSignature(): Promise<string> {
+    if (!workspaceCwd) return Promise.resolve("");
+    const run = (args: string[]) => new Promise<string>((resolve) => {
+      execFile("git", args, { cwd: workspaceCwd, maxBuffer: 10 * 1024 * 1024 },
+        (err, stdout) => resolve(err ? "" : stdout));
+    });
+    return Promise.all([
+      run(["for-each-ref", "--format=%(objectname) %(refname)"]),
+      run(["rev-parse", "HEAD"]),
+    ]).then(([refs, head]) => refs + head);
   }
+
+  async function maybeAutoRefresh(): Promise<void> {
+    if (!autoRefreshEnabled || !isGraphEditorOpen() || refreshing) return;
+    const sig = await getRefSignature();
+    if (!sig) return;
+    if (lastRefSig === undefined) { lastRefSig = sig; return; } // establish baseline
+    if (sig !== lastRefSig) {
+      lastRefSig = sig;
+      refreshGraph({ preserveView: true });
+    }
+  }
+
+  // Change-driven auto-refresh trigger. Prefer the built-in Git extension's
+  // change event (event-driven and reliable cross-platform — it does the .git
+  // watching for us; VS Code's own FileSystemWatcher does not fire for .git).
+  // Its event also fires on working-tree/index edits, so maybeAutoRefresh()
+  // dedupes via the ref signature. Fall back to a light poll only if that
+  // extension is unavailable.
+  let gitStateSub: vscode.Disposable | undefined;
+  let openRepoSub: vscode.Disposable | undefined;
+  async function setupGitEventTrigger(): Promise<boolean> {
+    try {
+      const ext = vscode.extensions.getExtension<any>("vscode.git");
+      if (!ext) return false;
+      const git = ext.isActive ? ext.exports : await ext.activate();
+      const api = git.getAPI(1);
+      const mine = () =>
+        api.repositories.find((r: any) => r.rootUri?.fsPath === workspaceCwd) ?? api.repositories[0];
+      const hook = (repo: any) => {
+        if (gitStateSub || !repo) return;
+        gitStateSub = repo.state.onDidChange(() => { void maybeAutoRefresh(); });
+      };
+      hook(mine());
+      openRepoSub = api.onDidOpenRepository(() => hook(mine())); // repos may load after activation
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  void setupGitEventTrigger().then((ok) => {
+    if (ok) return;
+    autoRefreshTimer = setInterval(() => { void maybeAutoRefresh(); }, 3000);
+  });
 
   const selectUpCmd = vscode.commands.registerCommand("boomergit.selectUp", () => {
     if (!decorationEngine) return;
@@ -599,8 +659,7 @@ export function activate(context: vscode.ExtensionContext) {
     providerReg, fileProviderReg, sidebarView, showGraphCmd, checkoutRefCmd, deleteBranchCmd, createBranchCmd, copyTextCmd, hoverProvider, selectionWatcher,
     commitInfoReg, changedFilesView, selectUpCmd, selectDownCmd, openFileDiffCmd, visibleEditorsWatcher, tabCloseWatcher,
     refreshCmd, toggleAutoRefreshCmd, configWatcher, statusBar,
-    ...(gitWatcher ? [gitWatcher] : []),
-    { dispose: () => { if (refreshDebounce) clearTimeout(refreshDebounce); decorationEngine?.dispose(); } },
+    { dispose: () => { if (autoRefreshTimer) clearInterval(autoRefreshTimer); gitStateSub?.dispose(); openRepoSub?.dispose(); decorationEngine?.dispose(); } },
   );
 }
 
