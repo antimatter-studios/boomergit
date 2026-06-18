@@ -547,25 +547,22 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // Change-driven auto-refresh. VS Code's FileSystemWatcher does not reliably
-  // emit events for changes inside .git, so instead poll a cheap ref signature
-  // (all ref OIDs + HEAD) and only do the real refresh when it actually moves —
-  // no expensive re-render while idle.
+  // A cheap signature of all ref OIDs + HEAD. Refs cover commits/rebase/fetch/
+  // merge/branch+tag ops; HEAD covers checkout. Used to dedupe refresh triggers
+  // so we only do the real (expensive) refresh when refs actually moved.
   function getRefSignature(): Promise<string> {
     if (!workspaceCwd) return Promise.resolve("");
     const run = (args: string[]) => new Promise<string>((resolve) => {
       execFile("git", args, { cwd: workspaceCwd, maxBuffer: 10 * 1024 * 1024 },
         (err, stdout) => resolve(err ? "" : stdout));
     });
-    // refs cover commits/rebase/fetch/merge/branch+tag ops; HEAD covers checkout.
     return Promise.all([
       run(["for-each-ref", "--format=%(objectname) %(refname)"]),
       run(["rev-parse", "HEAD"]),
     ]).then(([refs, head]) => refs + head);
   }
 
-  const AUTO_REFRESH_INTERVAL_MS = 2000;
-  autoRefreshTimer = setInterval(async () => {
+  async function maybeAutoRefresh(): Promise<void> {
     if (!autoRefreshEnabled || !isGraphEditorOpen() || refreshing) return;
     const sig = await getRefSignature();
     if (!sig) return;
@@ -574,7 +571,39 @@ export function activate(context: vscode.ExtensionContext) {
       lastRefSig = sig;
       refreshGraph({ preserveView: true });
     }
-  }, AUTO_REFRESH_INTERVAL_MS);
+  }
+
+  // Change-driven auto-refresh trigger. Prefer the built-in Git extension's
+  // change event (event-driven and reliable cross-platform — it does the .git
+  // watching for us; VS Code's own FileSystemWatcher does not fire for .git).
+  // Its event also fires on working-tree/index edits, so maybeAutoRefresh()
+  // dedupes via the ref signature. Fall back to a light poll only if that
+  // extension is unavailable.
+  let gitStateSub: vscode.Disposable | undefined;
+  async function setupGitEventTrigger(): Promise<boolean> {
+    try {
+      const ext = vscode.extensions.getExtension<any>("vscode.git");
+      if (!ext) return false;
+      const git = ext.isActive ? ext.exports : await ext.activate();
+      const api = git.getAPI(1);
+      const mine = () =>
+        api.repositories.find((r: any) => r.rootUri?.fsPath === workspaceCwd) ?? api.repositories[0];
+      const hook = (repo: any) => {
+        if (gitStateSub || !repo) return;
+        gitStateSub = repo.state.onDidChange(() => { void maybeAutoRefresh(); });
+      };
+      hook(mine());
+      api.onDidOpenRepository(() => hook(mine())); // repos may load after activation
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  void setupGitEventTrigger().then((ok) => {
+    if (ok) return;
+    autoRefreshTimer = setInterval(() => { void maybeAutoRefresh(); }, 3000);
+  });
 
   const selectUpCmd = vscode.commands.registerCommand("boomergit.selectUp", () => {
     if (!decorationEngine) return;
@@ -611,7 +640,7 @@ export function activate(context: vscode.ExtensionContext) {
     providerReg, fileProviderReg, sidebarView, showGraphCmd, checkoutRefCmd, deleteBranchCmd, createBranchCmd, copyTextCmd, hoverProvider, selectionWatcher,
     commitInfoReg, changedFilesView, selectUpCmd, selectDownCmd, openFileDiffCmd, visibleEditorsWatcher, tabCloseWatcher,
     refreshCmd, toggleAutoRefreshCmd, configWatcher, statusBar,
-    { dispose: () => { if (autoRefreshTimer) clearInterval(autoRefreshTimer); decorationEngine?.dispose(); } },
+    { dispose: () => { if (autoRefreshTimer) clearInterval(autoRefreshTimer); gitStateSub?.dispose(); decorationEngine?.dispose(); } },
   );
 }
 
