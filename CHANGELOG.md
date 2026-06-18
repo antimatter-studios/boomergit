@@ -11,6 +11,9 @@ Release notes.
 
 ## [Unreleased]
 
+### Fixed
+- Auto-refresh now reliably detects external git changes (commits, rebases, fetches done in a terminal). It previously relied on a `.git` file watcher that VS Code doesn't fire for; it now polls a cheap ref signature and refreshes only when refs actually move.
+
 ## [0.3.0] - 2026-06-18
 
 ### Added

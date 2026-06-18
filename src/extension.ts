@@ -95,7 +95,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Refresh state: guard against overlapping refreshes; auto-refresh is opt-in.
   let refreshing = false;
-  let refreshDebounce: ReturnType<typeof setTimeout> | undefined;
+  let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
+  let lastRefSig: string | undefined;
   let autoRefreshEnabled = vscode.workspace.getConfiguration("boomergit").get<boolean>("autoRefresh", false);
 
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -379,6 +380,9 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       updateStatusBar();
+      // Keep the auto-refresh baseline aligned with what's now rendered so the
+      // poll doesn't fire a redundant refresh right after this one.
+      void getRefSignature().then((s) => { if (s) lastRefSig = s; });
     } catch { /* silently fail on refresh */ }
     finally { refreshing = false; }
   }
@@ -543,26 +547,34 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // Change-driven auto-refresh: watch .git for ref/HEAD changes (objects are
-  // excluded by VS Code's default watcher excludes). Debounced; only when the
-  // graph is open and auto-refresh is enabled.
-  let gitWatcher: vscode.FileSystemWatcher | undefined;
-  const wsFolder = vscode.workspace.workspaceFolders?.[0];
-  if (wsFolder) {
-    gitWatcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(wsFolder, ".git/**")
-    );
-    const relevant = /\/(HEAD|ORIG_HEAD|packed-refs)$|\/refs\//;
-    const onGitChange = (changed: vscode.Uri) => {
-      if (!autoRefreshEnabled || !isGraphEditorOpen()) return;
-      if (!relevant.test(changed.path)) return;
-      if (refreshDebounce) clearTimeout(refreshDebounce);
-      refreshDebounce = setTimeout(() => refreshGraph({ preserveView: true }), 600);
-    };
-    gitWatcher.onDidChange(onGitChange);
-    gitWatcher.onDidCreate(onGitChange);
-    gitWatcher.onDidDelete(onGitChange);
+  // Change-driven auto-refresh. VS Code's FileSystemWatcher does not reliably
+  // emit events for changes inside .git, so instead poll a cheap ref signature
+  // (all ref OIDs + HEAD) and only do the real refresh when it actually moves —
+  // no expensive re-render while idle.
+  function getRefSignature(): Promise<string> {
+    if (!workspaceCwd) return Promise.resolve("");
+    const run = (args: string[]) => new Promise<string>((resolve) => {
+      execFile("git", args, { cwd: workspaceCwd, maxBuffer: 10 * 1024 * 1024 },
+        (err, stdout) => resolve(err ? "" : stdout));
+    });
+    // refs cover commits/rebase/fetch/merge/branch+tag ops; HEAD covers checkout.
+    return Promise.all([
+      run(["for-each-ref", "--format=%(objectname) %(refname)"]),
+      run(["rev-parse", "HEAD"]),
+    ]).then(([refs, head]) => refs + head);
   }
+
+  const AUTO_REFRESH_INTERVAL_MS = 2000;
+  autoRefreshTimer = setInterval(async () => {
+    if (!autoRefreshEnabled || !isGraphEditorOpen() || refreshing) return;
+    const sig = await getRefSignature();
+    if (!sig) return;
+    if (lastRefSig === undefined) { lastRefSig = sig; return; } // establish baseline
+    if (sig !== lastRefSig) {
+      lastRefSig = sig;
+      refreshGraph({ preserveView: true });
+    }
+  }, AUTO_REFRESH_INTERVAL_MS);
 
   const selectUpCmd = vscode.commands.registerCommand("boomergit.selectUp", () => {
     if (!decorationEngine) return;
@@ -599,8 +611,7 @@ export function activate(context: vscode.ExtensionContext) {
     providerReg, fileProviderReg, sidebarView, showGraphCmd, checkoutRefCmd, deleteBranchCmd, createBranchCmd, copyTextCmd, hoverProvider, selectionWatcher,
     commitInfoReg, changedFilesView, selectUpCmd, selectDownCmd, openFileDiffCmd, visibleEditorsWatcher, tabCloseWatcher,
     refreshCmd, toggleAutoRefreshCmd, configWatcher, statusBar,
-    ...(gitWatcher ? [gitWatcher] : []),
-    { dispose: () => { if (refreshDebounce) clearTimeout(refreshDebounce); decorationEngine?.dispose(); } },
+    { dispose: () => { if (autoRefreshTimer) clearInterval(autoRefreshTimer); decorationEngine?.dispose(); } },
   );
 }
 
