@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# merge-guard: hard-block any push that carries a merge commit. This is the
+# safety net behind pre-merge-commit — it also catches merge commits that
+# arrived via fetch, cherry-pick, or a rebase that preserved merges. Purely
+# local, no network. Bypass only with git's built-in --no-verify.
+set -u
+status=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Deleting a remote branch: nothing to inspect.
+  printf '%s' "$local_sha" | grep -qE '^0+$' && continue
+
+  if printf '%s' "$remote_sha" | grep -qE '^0+$'; then
+    # New branch on the remote: inspect commits not already on any remote ref.
+    merges=$(git rev-list --merges "$local_sha" --not --remotes 2>/dev/null)
+  else
+    merges=$(git rev-list --merges "${remote_sha}..${local_sha}" 2>/dev/null)
+  fi
+
+  if [ -n "$merges" ]; then
+    printf 'merge-guard: BLOCKED — push to %s contains merge commit(s):\n' "$remote_ref" >&2
+    printf '%s\n' "$merges" | sed 's/^/  /' >&2
+    printf '  Linearize first:  git pull --rebase   |   git rebase <upstream>\n' >&2
+    status=1
+  fi
+done
+
+exit $status

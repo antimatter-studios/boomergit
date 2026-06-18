@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# merge-guard: on every commit, ensure the GitHub repo forbids merge commits.
+# Fail-open — never blocks a commit on network/permission problems.
+set -u
+dir=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=_merge-guard.sh
+. "$dir/_merge-guard.sh"
+mg_heal_settings
+exit 0
