@@ -11,6 +11,10 @@ Release notes.
 
 ## [Unreleased]
 
+### Added
+- Refresh button in the graph editor's title bar that re-reads the log while keeping the selected commit and scroll position.
+- Opt-in auto-refresh (`boomergit.autoRefresh`, default off) that updates the graph when the repository's refs change, toggled from the status bar.
+
 ## [0.2.1] - 2026-06-18
 
 ### Added
