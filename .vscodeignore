@@ -11,8 +11,10 @@ CLAUDE.md
 AGENTS.md
 tsconfig.json
 esbuild.mjs
+test/**
 test-*.mjs
 test-*.html
+vitest.config.*
 build/**
 **/*.ts
 **/*.map

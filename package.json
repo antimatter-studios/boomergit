@@ -166,6 +166,8 @@
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "package": "npm run build && mkdir -p build && vsce package --out build/",
     "publish:vscode": "vsce publish --packagePath build/boomergit-*.vsix",
     "publish:openvsx": "ovsx publish build/boomergit-*.vsix",
@@ -180,6 +182,7 @@
     "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.20.0",
     "ovsx": "^0.10.9",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vitest": "^4.1.9"
   }
 }
