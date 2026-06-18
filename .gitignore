@@ -1,5 +1,6 @@
-node_modules/
-out/
-build/
+.env.local
+build
+node_modules
+out
 *.vsix
 .DS_Store
