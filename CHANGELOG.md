@@ -11,6 +11,8 @@ Release notes.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-06-18
+
 ### Added
 - CI/CD pipeline (build → test → release) via GitHub Actions; the release stage
   publishes to the VS Code Marketplace and Open VSX on `v*` tags and creates a
