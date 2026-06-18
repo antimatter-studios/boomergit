@@ -395,9 +395,12 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       updateStatusBar();
-      // Keep the auto-refresh baseline aligned with what's now rendered so the
-      // poll doesn't fire a redundant refresh right after this one.
-      void getRefSignature().then((s) => { if (s) lastRefSig = s; });
+      // Align the baseline with what's now rendered BEFORE the finally releases
+      // the `refreshing` guard — otherwise a git event firing in that gap could
+      // compare against the stale pre-refresh signature and fire a redundant
+      // refresh.
+      const sig = await getRefSignature();
+      if (sig) lastRefSig = sig;
     } catch { /* silently fail on refresh */ }
     finally { refreshing = false; }
   }
@@ -595,6 +598,7 @@ export function activate(context: vscode.ExtensionContext) {
   // dedupes via the ref signature. Fall back to a light poll only if that
   // extension is unavailable.
   let gitStateSub: vscode.Disposable | undefined;
+  let openRepoSub: vscode.Disposable | undefined;
   async function setupGitEventTrigger(): Promise<boolean> {
     try {
       const ext = vscode.extensions.getExtension<any>("vscode.git");
@@ -608,7 +612,7 @@ export function activate(context: vscode.ExtensionContext) {
         gitStateSub = repo.state.onDidChange(() => { void maybeAutoRefresh(); });
       };
       hook(mine());
-      api.onDidOpenRepository(() => hook(mine())); // repos may load after activation
+      openRepoSub = api.onDidOpenRepository(() => hook(mine())); // repos may load after activation
       return true;
     } catch {
       return false;
@@ -655,7 +659,7 @@ export function activate(context: vscode.ExtensionContext) {
     providerReg, fileProviderReg, sidebarView, showGraphCmd, checkoutRefCmd, deleteBranchCmd, createBranchCmd, copyTextCmd, hoverProvider, selectionWatcher,
     commitInfoReg, changedFilesView, selectUpCmd, selectDownCmd, openFileDiffCmd, visibleEditorsWatcher, tabCloseWatcher,
     refreshCmd, toggleAutoRefreshCmd, configWatcher, statusBar,
-    { dispose: () => { if (autoRefreshTimer) clearInterval(autoRefreshTimer); gitStateSub?.dispose(); decorationEngine?.dispose(); } },
+    { dispose: () => { if (autoRefreshTimer) clearInterval(autoRefreshTimer); gitStateSub?.dispose(); openRepoSub?.dispose(); decorationEngine?.dispose(); } },
   );
 }
 
