@@ -20,10 +20,15 @@ export class CommitInfoProvider implements vscode.WebviewViewProvider {
   private fullMessage = "";
   private fetchSeq = 0;
 
+  constructor(private onDidBecomeVisible?: () => void) {}
+
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     console.log("[boomergit] resolveWebviewView called");
     this.view = webviewView;
     webviewView.webview.options = { enableScripts: false };
+    webviewView.onDidChangeVisibility(() => {
+      if (webviewView.visible) this.onDidBecomeVisible?.();
+    });
     this.render();
   }
 
