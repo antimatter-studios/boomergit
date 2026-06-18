@@ -98,9 +98,25 @@
       {
         "command": "boomergit.selectDown",
         "title": "Select Next Row"
+      },
+      {
+        "command": "boomergit.refresh",
+        "title": "BoomerGit: Refresh Graph",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "boomergit.toggleAutoRefresh",
+        "title": "BoomerGit: Toggle Auto-Refresh"
       }
     ],
     "menus": {
+      "editor/title": [
+        {
+          "command": "boomergit.refresh",
+          "when": "resourceScheme == boomergit",
+          "group": "navigation"
+        }
+      ],
       "commandPalette": [
         {
           "command": "boomergit.checkoutRef",
@@ -159,6 +175,16 @@
         "editor.occurrencesHighlight": "off",
         "editor.selectionHighlight": false,
         "editor.renderLineHighlight": "none"
+      }
+    },
+    "configuration": {
+      "title": "BoomerGit",
+      "properties": {
+        "boomergit.autoRefresh": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically refresh the graph when the repository's refs change (watches .git). Toggle from the status bar while the graph is open."
+        }
       }
     }
   },
