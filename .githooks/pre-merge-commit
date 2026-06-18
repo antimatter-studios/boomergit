@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# merge-guard: refuse to CREATE a merge commit locally (hard block). Runs when
+# a `git merge` / `git pull` would record a merge commit (fast-forward merges
+# don't trigger this). Purely local — no network. Bypass only with git's
+# built-in --no-verify if you genuinely must.
+printf 'merge-guard: BLOCKED — this merge would create a merge commit.\n' >&2
+printf '  Linearize instead:  git merge --ff-only   |   git pull --rebase   |   git rebase\n' >&2
+exit 1

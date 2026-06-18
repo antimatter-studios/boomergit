@@ -3,6 +3,7 @@ src/**
 docs/**
 node_modules/**
 .github/**
+.githooks/**
 .gitignore
 .gitattributes
 .env*
