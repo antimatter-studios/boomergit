@@ -338,45 +338,60 @@ export function activate(context: vscode.ExtensionContext) {
 
       const doc = await vscode.workspace.openTextDocument(uri);
       await vscode.languages.setTextDocumentLanguage(doc, "boomergit");
-      const editor = await vscode.window.showTextDocument(doc, {
-        preview: false,
-        viewColumn: vscode.ViewColumn.One,
-        preserveFocus: opts.preserveView === true,
-      });
-
-      vscode.commands.executeCommand("setContext", "boomergit:graphOpen", true);
 
       lastRows = rows;
       lastCommits = commits;
       decorationEngine?.dispose();
       decorationEngine = new GraphDecorationEngine(storageDir);
-      decorationEngine.apply(editor, rows, commits, currentBranch);
 
-      // Restore the previously selected commit if it still exists, otherwise
-      // auto-select the current branch commit and show its details.
-      let restored = false;
-      if (opts.preserveView && prevSelectedHash) {
-        const idx = commits.findIndex((c) => c.hash === prevSelectedHash);
-        if (idx >= 0) {
-          decorationEngine.selectRow(editor, idx);
-          showSidebar(commits[idx]);
-          restored = true;
-        }
-      }
-      if (!restored && currentBranch) {
-        const idx = commits.findIndex((c) =>
-          c.refs.some((r) => r.type === "branch" && r.name === currentBranch)
+      // Get the graph editor WITHOUT stealing focus or pulling its tab to the
+      // front. Only the initial open actively shows it. A refresh just
+      // decorates it if it's already visible; if the user is on another tab,
+      // the content + state are updated silently and the visible-editors
+      // watcher re-applies decorations when they switch back — so a background
+      // refresh never interrupts what they're doing.
+      let editor: vscode.TextEditor | undefined;
+      if (opts.preserveView) {
+        editor = vscode.window.visibleTextEditors.find(
+          (e) => e.document.uri.toString() === uri.toString()
         );
-        if (idx >= 0) {
-          decorationEngine.selectRow(editor, idx);
-          showSidebar(commits[idx], currentBranch);
-        }
+      } else {
+        editor = await vscode.window.showTextDocument(doc, {
+          preview: false,
+          viewColumn: vscode.ViewColumn.One,
+        });
+        vscode.commands.executeCommand("setContext", "boomergit:graphOpen", true);
       }
 
-      // Restore scroll position on a preserve-view refresh.
-      if (opts.preserveView && prevTopLine !== undefined) {
-        const line = Math.min(prevTopLine, editor.document.lineCount - 1);
-        editor.revealRange(new vscode.Range(line, 0, line, 0), vscode.TextEditorRevealType.AtTop);
+      if (editor) {
+        decorationEngine.apply(editor, rows, commits, currentBranch);
+
+        // Restore the previously selected commit if it still exists, otherwise
+        // auto-select the current branch commit and show its details.
+        let restored = false;
+        if (opts.preserveView && prevSelectedHash) {
+          const idx = commits.findIndex((c) => c.hash === prevSelectedHash);
+          if (idx >= 0) {
+            decorationEngine.selectRow(editor, idx);
+            showSidebar(commits[idx]);
+            restored = true;
+          }
+        }
+        if (!restored && currentBranch) {
+          const idx = commits.findIndex((c) =>
+            c.refs.some((r) => r.type === "branch" && r.name === currentBranch)
+          );
+          if (idx >= 0) {
+            decorationEngine.selectRow(editor, idx);
+            showSidebar(commits[idx], currentBranch);
+          }
+        }
+
+        // Restore scroll position on a preserve-view refresh.
+        if (opts.preserveView && prevTopLine !== undefined) {
+          const line = Math.min(prevTopLine, editor.document.lineCount - 1);
+          editor.revealRange(new vscode.Range(line, 0, line, 0), vscode.TextEditorRevealType.AtTop);
+        }
       }
 
       updateStatusBar();
