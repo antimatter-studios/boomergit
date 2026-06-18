@@ -170,9 +170,9 @@
     "publish:vscode": "vsce publish --packagePath build/boomergit-*.vsix",
     "publish:openvsx": "ovsx publish build/boomergit-*.vsix",
     "publish:all": "npm run publish:vscode && npm run publish:openvsx",
-    "release:patch": "npm version patch && npm run package && npm run publish:all",
-    "release:minor": "npm version minor && npm run package && npm run publish:all",
-    "release:major": "npm version major && npm run package && npm run publish:all"
+    "release:patch": "npm version patch && git push --follow-tags",
+    "release:minor": "npm version minor && git push --follow-tags",
+    "release:major": "npm version major && git push --follow-tags"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
