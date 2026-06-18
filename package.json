@@ -2,7 +2,7 @@
   "name": "boomergit",
   "displayName": "BoomerGit",
   "description": "Old man shakes stick at crap git integrations — native git graph visualization",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "ChristopherThomas",
   "icon": "resources/old_man_yells_at_git_256.png",
   "repository": {
