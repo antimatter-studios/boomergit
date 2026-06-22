@@ -301,11 +301,15 @@ export function activate(context: vscode.ExtensionContext) {
     refreshing = true;
     try {
       // Snapshot view state to restore after a preserve-view refresh.
-      let prevSelectedHash: string | undefined;
+      let prevSelectedHashes: string[] = [];
       let prevTopLine: number | undefined;
       if (opts.preserveView) {
         const sel = decorationEngine?.getSelectedRows() ?? [];
-        if (sel.length === 1 && lastCommits) prevSelectedHash = lastCommits[sel[0]]?.hash;
+        if (lastCommits) {
+          prevSelectedHashes = sel
+            .map((l) => lastCommits![l]?.hash)
+            .filter((h): h is string => !!h);
+        }
         const ge = vscode.window.visibleTextEditors.find((e) => e.document.uri.scheme === SCHEME);
         prevTopLine = ge?.visibleRanges[0]?.start.line;
       }
@@ -366,14 +370,18 @@ export function activate(context: vscode.ExtensionContext) {
       if (editor) {
         decorationEngine.apply(editor, rows, commits, currentBranch);
 
-        // Restore the previously selected commit if it still exists, otherwise
-        // auto-select the current branch commit and show its details.
+        // Restore the previously selected commit(s) if they still exist
+        // (up to the 2-row compare limit), otherwise auto-select the current
+        // branch commit and show its details.
         let restored = false;
-        if (opts.preserveView && prevSelectedHash) {
-          const idx = commits.findIndex((c) => c.hash === prevSelectedHash);
-          if (idx >= 0) {
-            decorationEngine.selectRow(editor, idx);
-            showSidebar(commits[idx]);
+        if (opts.preserveView && prevSelectedHashes.length) {
+          for (const hash of prevSelectedHashes) {
+            const idx = commits.findIndex((c) => c.hash === hash);
+            if (idx >= 0) decorationEngine.selectRow(editor, idx);
+          }
+          const sel = decorationEngine.getSelectedRows();
+          if (sel.length) {
+            showSidebar(commits[sel[0]]);
             restored = true;
           }
         }

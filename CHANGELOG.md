@@ -11,6 +11,9 @@ Release notes.
 
 ## [Unreleased]
 
+### Fixed
+- Row-compare selection no longer leaks: a refresh previously orphaned the red selection highlights and `[n]` markers (their decorations were never disposed), so they piled up on more than two rows across refreshes. The decoration engine now disposes selection + hover decorations on teardown, and a refresh preserves both selected compare rows.
+
 ## [0.3.1] - 2026-06-18
 
 ### Fixed

@@ -325,6 +325,14 @@ export class GraphDecorationEngine {
 
   dispose(): void {
     this.clearDecorations();
+    // Selection + hover decorations are separate decoration types and must be
+    // disposed too — otherwise, when refreshGraph() replaces this engine, their
+    // red row highlights and [n] markers are orphaned (VS Code keeps rendering
+    // them, the new engine can't clear them) and pile up across refreshes.
+    this.clearHighlight();
+    for (const d of this.selectionDecos) d.dispose();
+    this.selectionDecos = [];
+    this.selectedRows = [];
     this.svgCache.clear();
   }
 }
