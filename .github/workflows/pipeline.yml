@@ -68,17 +68,25 @@ jobs:
           cache: npm
       - run: npm ci
 
-      - name: Detect new version
+      - name: Detect version bump
         id: check
         run: |
           V="$(node -p "require('./package.json').version")"
           echo "version=$V" >> "$GITHUB_OUTPUT"
-          if git rev-parse "v$V" >/dev/null 2>&1; then
-            echo "v$V already released — nothing to do."
-            echo "release=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "v$V is new — releasing."
+          # Gate on whether this push changed the version vs the commit before it,
+          # NOT on whether the tag exists — so re-running this run after a partial
+          # publish re-enters the (idempotent) steps and completes the release.
+          BEFORE="${{ github.event.before }}"
+          PREV=""
+          if [ -n "$BEFORE" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            PREV="$(git show "$BEFORE:package.json" 2>/dev/null \
+              | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{try{console.log(JSON.parse(d).version)}catch{console.log("")}})')"
+          fi
+          echo "version: prev=${PREV:-<none>} current=$V"
+          if [ "$V" != "$PREV" ]; then
             echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Package VSIX
@@ -136,8 +144,12 @@ jobs:
         run: |
           V="${{ steps.check.outputs.version }}"
           NOTES="${{ steps.notes.outputs.file }}"
-          # gh release create makes the tag at the merged commit.
-          if [ -n "$NOTES" ]; then
+          # Idempotent: if a prior (partial) run already created the release+tag,
+          # just (re)attach the VSIX so a re-run completes recovery; otherwise
+          # create it (gh makes the tag at the merged commit).
+          if gh release view "v$V" >/dev/null 2>&1; then
+            gh release upload "v$V" build/*.vsix --clobber
+          elif [ -n "$NOTES" ]; then
             gh release create "v$V" build/*.vsix --title "v$V" --notes-file "$NOTES" --target "$GITHUB_SHA"
           else
             gh release create "v$V" build/*.vsix --title "v$V" --generate-notes --target "$GITHUB_SHA"

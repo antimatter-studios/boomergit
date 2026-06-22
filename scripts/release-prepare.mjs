@@ -4,6 +4,9 @@
 // main, where the pipeline's release-on-merge job publishes and creates the
 // GitHub Release + tag.
 //
+// All mutations happen on the release branch, so a mid-script failure never
+// leaves `main` with a half-applied bump.
+//
 // Usage: node scripts/release-prepare.mjs <patch|minor|major>
 import { execSync, execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -29,24 +32,49 @@ if (cap("git status --porcelain")) {
 }
 sh("git pull --ff-only");
 
-// Bump version in package.json + lock (no commit, no tag), then promote the
-// CHANGELOG Unreleased section to the new version.
-sh(`npm version ${bump} --no-git-tag-version`);
-const version = JSON.parse(readFileSync("package.json", "utf8")).version;
+// Compute the next version up front so the branch name is known before any file
+// is mutated, and bail early if that release branch already exists (nothing
+// touched yet).
+const current = JSON.parse(readFileSync("package.json", "utf8")).version;
+const m = current.match(/^(\d+)\.(\d+)\.(\d+)$/);
+if (!m) {
+  console.error(`release: unexpected version "${current}" (expected X.Y.Z).`);
+  process.exit(1);
+}
+const [maj, min, pat] = m.slice(1).map(Number);
+const version =
+  bump === "major" ? `${maj + 1}.0.0` : bump === "minor" ? `${maj}.${min + 1}.0` : `${maj}.${min}.${pat + 1}`;
 const tag = `v${version}`;
-sh("node scripts/bump-changelog.mjs");
-
-// Commit on a release branch and open the PR.
 const relBranch = `release/${tag}`;
+
+if (cap(`git branch --list ${relBranch}`) || cap(`git ls-remote --heads origin ${relBranch}`)) {
+  console.error(`release: branch ${relBranch} already exists — delete it or finish that release first.`);
+  process.exit(1);
+}
+
+// Everything below runs on the release branch; revert to a clean main on failure.
 sh(`git checkout -b ${relBranch}`);
-sh("git add -A");
-execFileSync("git", ["commit", "-m", `release: ${tag}`], { stdio: "inherit" });
-sh(`git push -u origin ${relBranch}`);
-execFileSync(
-  "gh",
-  ["pr", "create", "--base", "main", "--title", `release: ${tag}`, "--body",
-    `Release ${tag}.\n\nMerging this lands the version bump on \`main\`; the pipeline's release-on-merge job then publishes to the VS Code Marketplace + Open VSX and creates the GitHub Release ${tag} with the VSIX attached.`],
-  { stdio: "inherit" }
-);
+try {
+  sh(`npm version ${version} --no-git-tag-version`);
+  sh("node scripts/bump-changelog.mjs");
+  sh("git add -A");
+  execFileSync("git", ["commit", "-m", `release: ${tag}`], { stdio: "inherit" });
+  sh(`git push -u origin ${relBranch}`);
+  execFileSync(
+    "gh",
+    ["pr", "create", "--base", "main", "--title", `release: ${tag}`, "--body",
+      `Release ${tag}.\n\nMerging this lands the version bump on \`main\`; the pipeline's release-on-merge job then publishes to the VS Code Marketplace + Open VSX and creates the GitHub Release ${tag} with the VSIX attached.`],
+    { stdio: "inherit" }
+  );
+} catch (err) {
+  console.error("\nrelease: failed — reverting to a clean main (no changes left behind).");
+  try {
+    sh("git checkout -f main");
+    sh(`git branch -D ${relBranch}`);
+  } catch {
+    /* best effort */
+  }
+  throw err;
+}
 
 console.log(`\n✓ Release PR opened for ${tag}. Merge it (squash) — CI publishes + tags automatically.`);

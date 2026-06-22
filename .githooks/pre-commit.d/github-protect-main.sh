@@ -18,9 +18,10 @@ branch=$(gh api "repos/$slug" --jq '.default_branch' 2>/dev/null) || {
 [ -n "$branch" ] || exit 0
 
 # Already protected the way we want (require PR + enforced for admins)? Skip.
-prot=$(gh api "repos/$slug/branches/$branch/protection" 2>/dev/null)
-if printf '%s' "$prot" | grep -q '"required_pull_request_reviews"' \
-   && printf '%s' "$prot" | grep -q '"enforce_admins"[^}]*"enabled":[[:space:]]*true'; then
+# Evaluate with jq (a gh dependency) — grep can't match gh's pretty-printed,
+# multi-line JSON, which otherwise PUTs protection on every commit.
+if [ "$(gh api "repos/$slug/branches/$branch/protection" \
+        --jq '(.required_pull_request_reviews != null) and (.enforce_admins.enabled == true)' 2>/dev/null)" = "true" ]; then
   exit 0
 fi
 
