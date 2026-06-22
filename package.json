@@ -198,10 +198,9 @@
     "publish:vscode": "vsce publish --packagePath build/boomergit-*.vsix",
     "publish:openvsx": "ovsx publish build/boomergit-*.vsix",
     "publish:all": "npm run publish:vscode && npm run publish:openvsx",
-    "version": "node scripts/bump-changelog.mjs && git add CHANGELOG.md",
-    "release:patch": "npm version patch && git push --follow-tags",
-    "release:minor": "npm version minor && git push --follow-tags",
-    "release:major": "npm version major && git push --follow-tags"
+    "release:patch": "node scripts/release-prepare.mjs patch",
+    "release:minor": "node scripts/release-prepare.mjs minor",
+    "release:major": "node scripts/release-prepare.mjs major"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
