@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# merge-guard: on every commit, ensure the GitHub repo forbids merge commits.
-# Fail-open — never blocks a commit on network/permission problems.
-set -u
-dir=$(cd "$(dirname "$0")" && pwd)
-# shellcheck source=_merge-guard.sh
-. "$dir/_merge-guard.sh"
-mg_heal_settings
-exit 0
+# github-guard hook: pre-commit
+#
+# Fires:    On `git commit`, before the commit message is requested.
+# Use for:  Linting, formatting, and fast checks on the staged snapshot.
+# Blocking: yes (non-zero aborts the commit)
+#
+# Dispatcher: runs every executable script in  .githooks/pre-commit.d/  in lexical
+# order. Add behaviour by dropping a guard script there; remove it by deleting
+# the file (or `chmod -x`). No pre-commit.d/ (or an empty one) = no-op. Managed by
+# github-guard — edit guards in the .d/ dir, not this file.
+d=$(cd "$(dirname "$0")" && pwd)
+exec "$d/lib/run-guards.sh" "$(basename "$0")" "$@"

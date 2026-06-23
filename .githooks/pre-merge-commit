@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
-# merge-guard: refuse to CREATE a merge commit locally (hard block). Runs when
-# a `git merge` / `git pull` would record a merge commit (fast-forward merges
-# don't trigger this). Purely local — no network. Bypass only with git's
-# built-in --no-verify if you genuinely must.
-printf 'merge-guard: BLOCKED — this merge would create a merge commit.\n' >&2
-printf '  Linearize instead:  git merge --ff-only   |   git pull --rebase   |   git rebase\n' >&2
-exit 1
+# github-guard hook: pre-merge-commit
+#
+# Fires:    Before a merge commit is created (a non-fast-forward `git merge`/`git pull`).
+# Use for:  Refusing merge commits or running extra merge checks.
+# Blocking: yes (non-zero aborts the merge commit)
+#
+# Dispatcher: runs every executable script in  .githooks/pre-merge-commit.d/  in lexical
+# order. Add behaviour by dropping a guard script there; remove it by deleting
+# the file (or `chmod -x`). No pre-merge-commit.d/ (or an empty one) = no-op. Managed by
+# github-guard — edit guards in the .d/ dir, not this file.
+d=$(cd "$(dirname "$0")" && pwd)
+exec "$d/lib/run-guards.sh" "$(basename "$0")" "$@"
