@@ -50,6 +50,13 @@ export const COLOR = {
    */
   worktreeAccent: "#73c991",
 
+  /**
+   * Whole-row tint for the same thing, when `worktrees.rowStyle` asks for it.
+   * Dark enough that the normal row colours stay readable on top — a tint, not
+   * a highlight.
+   */
+  worktreeRow: "#1b3a29",
+
   /** A row picked for compare, and its marker in the overview ruler. */
   selectedRow: "#cc3333",
   selectedRowMarker: "#5a9bf6",

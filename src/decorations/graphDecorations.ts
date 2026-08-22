@@ -6,6 +6,17 @@ import { SvgTileCache, COL_WIDTH } from "../graph/svgTileGen.js";
 import { COLOR, REF_BADGE_COLOR } from "../ui/theme.js";
 import { TIMING } from "../ui/timings.js";
 
+/**
+ * How a row another working tree has checked out is marked.
+ *
+ * Two options because they trade differently. The ring is drawn into the SVG
+ * tile, so it composes with everything — the inverted active row and the red
+ * compare selection both still show through. The background is far more
+ * obvious but claims the row's fill, which those two already use, so on a row
+ * that is both the winner is VS Code's z-order rather than our choice.
+ */
+export type WorktreeRowStyle = "background" | "ring" | "both" | "none";
+
 export interface RefHit {
   ref: Ref;
   commitHash: string;
@@ -98,15 +109,18 @@ export class GraphDecorationEngine {
   }
 
   /**
-   * Tick the overview ruler for rows another working tree has checked out, so
-   * they can be found when scrolled off screen.
+   * Mark rows another working tree has checked out.
    *
-   * The row itself is marked by a ring around its commit dot, drawn into the
-   * SVG tile — see TileMarks. A whole-row fill would have been bolder but
-   * cannot compose: the inverted active row and the compare selection both
-   * fill the row already, and a third fill just fights them.
+   * The ruler tick is unconditional — it costs nothing and is the only way to
+   * find a worktree scrolled off screen. The row tint is added when
+   * `worktrees.rowStyle` asks for it; the ring, when it does, is drawn into the
+   * SVG tile instead (see TileMarks).
    */
-  private markWorktreeRows(editor: vscode.TextEditor, commits: Commit[]): void {
+  private markWorktreeRows(
+    editor: vscode.TextEditor,
+    commits: Commit[],
+    rowStyle: WorktreeRowStyle
+  ): void {
     const rows = commits
       .map((commit, line) =>
         commit.refs.some((ref) => ref.type === "worktree")
@@ -116,17 +130,30 @@ export class GraphDecorationEngine {
       .filter((r): r is vscode.DecorationOptions => r !== undefined);
     if (rows.length === 0) return;
 
+    const tinted = rowStyle === "background" || rowStyle === "both";
     this.paint(editor, rows, {
+      backgroundColor: tinted ? COLOR.worktreeRow : undefined,
       isWholeLine: true,
       overviewRulerColor: REF_BADGE_COLOR.worktree,
       overviewRulerLane: vscode.OverviewRulerLane.Left,
     });
   }
 
+  /**
+   * Read from configuration here rather than threaded through apply(), the same
+   * way the line height is — both are presentation settings this engine owns.
+   */
+  private worktreeRowStyle(): WorktreeRowStyle {
+    return vscode.workspace
+      .getConfiguration("boomergit")
+      .get<WorktreeRowStyle>("worktrees.rowStyle", "background");
+  }
+
   apply(editor: vscode.TextEditor, rows: GraphRow[], commits: Commit[], currentBranch?: string): void {
     this.clearDecorations();
     this.commits = commits;
     const lineHeight = this.computeLineHeight(editor);
+    const rowStyle = this.worktreeRowStyle();
 
     // Use a consistent column count across all rows so SVG tiles have
     // uniform width — prevents text from shifting left/right per row.
@@ -136,8 +163,9 @@ export class GraphDecorationEngine {
     this.activeLine = findActiveLine(commits, currentBranch);
 
     for (let i = 0; i < rows.length && i < commits.length; i++) {
+      const inWorktree = commits[i].refs.some((ref) => ref.type === "worktree");
       const marks: TileMarks = {
-        worktree: commits[i].refs.some((ref) => ref.type === "worktree"),
+        worktree: inWorktree && (rowStyle === "ring" || rowStyle === "both"),
       };
       const svgPath = this.svgCache.getTilePath(rows[i], lineHeight, globalMaxCols, marks);
       const isActive = i === this.activeLine;
@@ -160,7 +188,7 @@ export class GraphDecorationEngine {
       this.decorationTypes.push(decorationType);
     }
 
-    this.markWorktreeRows(editor, commits);
+    this.markWorktreeRows(editor, commits, rowStyle);
     this.applyTextColors(editor, commits, rows);
   }
 

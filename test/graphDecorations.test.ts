@@ -355,6 +355,11 @@ describe("ref badge decorations", () => {
 describe("worktree marks", () => {
   const worktreeRef = { name: "feature", type: "worktree" as const };
 
+  /** Pick how rows are marked, as the setting would. */
+  function rowStyle(style: "background" | "ring" | "both" | "none") {
+    __state.configValues.set("boomergit.worktrees.rowStyle", style);
+  }
+
   /** The SVG written for a given row, read back off disk. */
   function tileFor(line: number, editor: { __decorations: Map<unknown, unknown> }) {
     const tiles = __state.decorationTypes.filter((d) => "before" in d.options);
@@ -363,6 +368,7 @@ describe("worktree marks", () => {
   }
 
   it("rings the commit dot of a row checked out in another worktree", () => {
+    rowStyle("ring");
     const commits = [
       commit("a".repeat(40), { refs: [worktreeRef] }),
       commit("b".repeat(40)),
@@ -376,6 +382,7 @@ describe("worktree marks", () => {
   });
 
   it("draws the ring outside the dot, not over it", () => {
+    rowStyle("ring");
     const commits = [commit("a".repeat(40), { refs: [worktreeRef] })];
     const { engine, editor, rows } = setup(commits);
     engine.apply(editor as never, rows, commits);
@@ -387,6 +394,7 @@ describe("worktree marks", () => {
   });
 
   it("gives the ring no fill, so the lane colour still reads through", () => {
+    rowStyle("ring");
     const commits = [commit("a".repeat(40), { refs: [worktreeRef] })];
     const { engine, editor, rows } = setup(commits);
     engine.apply(editor as never, rows, commits);
@@ -395,7 +403,8 @@ describe("worktree marks", () => {
     );
   });
 
-  it("does not tint the row, so the active row and selection still show", () => {
+  it("adds no row fill in ring mode, so the active row and selection still show", () => {
+    rowStyle("ring");
     const commits = [commit("a".repeat(40), { refs: [worktreeRef] })];
     const { engine, editor, rows } = setup(commits);
     engine.apply(editor as never, rows, commits);
@@ -430,6 +439,7 @@ describe("worktree marks", () => {
   });
 
   it("does not share a cached tile between ringed and plain rows", () => {
+    rowStyle("ring");
     // Structurally identical rows differing only in the mark
     const commits = [
       commit("a".repeat(40), { refs: [worktreeRef] }),
@@ -680,5 +690,66 @@ describe("line height", () => {
     engine.apply(editor as never, rows, commits);
     const tile = __state.decorationTypes.find((d) => "before" in d.options)!;
     expect((tile.options.before as Record<string, unknown>).height).toBe("28px");
+  });
+});
+
+describe("worktree row style setting", () => {
+  const worktreeRef = { name: "feature", type: "worktree" as const };
+
+  function build(style: string) {
+    __state.configValues.set("boomergit.worktrees.rowStyle", style);
+    const commits = [commit("a".repeat(40), { refs: [worktreeRef] })];
+    const built = setup(commits);
+    built.engine.apply(built.editor as never, built.rows, commits);
+    return built;
+  }
+
+  function tileHasRing(editor: { __decorations: Map<unknown, unknown> }) {
+    const tile = __state.decorationTypes.find((d) => "before" in d.options)!;
+    const path = (tile.options.before as { contentIconPath: { fsPath: string } }).contentIconPath
+      .fsPath;
+    return fs.readFileSync(path, "utf8").includes(COLOR.worktreeAccent);
+  }
+
+  function hasTint() {
+    return __state.decorationTypes.some(
+      (d) => d.options.backgroundColor === COLOR.worktreeRow
+    );
+  }
+
+  it("tints the row and draws no ring by default", () => {
+    const { editor } = build("background");
+    expect(hasTint()).toBe(true);
+    expect(tileHasRing(editor)).toBe(false);
+  });
+
+  it("draws a ring and no tint in ring mode", () => {
+    const { editor } = build("ring");
+    expect(hasTint()).toBe(false);
+    expect(tileHasRing(editor)).toBe(true);
+  });
+
+  it("does both when asked for both", () => {
+    const { editor } = build("both");
+    expect(hasTint()).toBe(true);
+    expect(tileHasRing(editor)).toBe(true);
+  });
+
+  it("does neither when asked for none", () => {
+    const { editor } = build("none");
+    expect(hasTint()).toBe(false);
+    expect(tileHasRing(editor)).toBe(false);
+  });
+
+  it("keeps the ruler tick whatever the style, including none", () => {
+    for (const style of ["background", "ring", "both", "none"]) {
+      __reset();
+      build(style);
+      expect(
+        __state.decorationTypes.filter(
+          (d) => d.options.overviewRulerColor === REF_BADGE_COLOR.worktree
+        )
+      ).toHaveLength(1);
+    }
   });
 });

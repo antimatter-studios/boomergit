@@ -251,6 +251,23 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Parent directory for new worktrees when `#boomergit.worktrees.location#` is `custom`. `${workspaceFolder}` expands to the repository root, and a relative path is resolved against it.\n\nFor an inside-the-repository layout use `${workspaceFolder}/.worktrees` and add `.worktrees/` to your `.gitignore`.\n\nLeft empty, this falls back to the sibling layout rather than creating a worktree somewhere unexpected."
+        },
+        "boomergit.worktrees.rowStyle": {
+          "type": "string",
+          "enum": [
+            "background",
+            "ring",
+            "both",
+            "none"
+          ],
+          "enumDescriptions": [
+            "Tint the whole row green. The most obvious, but it claims the row's background, which the checked-out branch row and a compare selection already use \u2014 on a row that is both, which one shows is up to VS Code.",
+            "Draw a green ring around the commit dot. Subtler, but composes with everything: the inverted active row and a compare selection both still show through.",
+            "Both the tint and the ring.",
+            "Neither. The W badge and the overview-ruler tick still mark the row."
+          ],
+          "default": "background",
+          "description": "How the graph marks a commit that another working tree has checked out. The W badge and the overview-ruler tick are always shown."
         }
       }
     }

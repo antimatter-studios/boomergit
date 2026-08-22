@@ -18,9 +18,11 @@ Release notes.
   tree of the repository — branch or directory name, whether it's detached,
   locked or prunable, and the commit it sits on. Clicking one jumps the graph to
   that commit; its context menu opens it in a new window or copies its path.
-- Commits another working tree has checked out are **ringed in the graph** and
-  ticked in the overview ruler, and carry a `W` badge naming the worktree. The
-  tree you have open isn't marked — its row already inverts to say so.
+- Commits another working tree has checked out are **tinted green**, ticked in
+  the overview ruler, and carry a `W` badge naming the worktree. The tree you
+  have open isn't marked — its row already inverts to say so.
+  `boomergit.worktrees.rowStyle` switches the row marker between the tint, a
+  ring around the commit dot, both, or neither.
 - **Create Worktree** on a branch badge, checking the branch out alongside
   rather than moving the tree you're in. From a remote branch it creates a local
   branch tracking it. The target path is always shown for confirmation first.
