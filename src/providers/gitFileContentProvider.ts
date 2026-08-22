@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { execFile } from "node:child_process";
+import { gitQuery } from "../git/exec.js";
 
 export const FILE_SCHEME = "boomergit-file";
 
@@ -20,15 +20,6 @@ export class GitFileContentProvider implements vscode.TextDocumentContentProvide
 
     const filePath = uri.path.startsWith("/") ? uri.path.slice(1) : uri.path;
 
-    return new Promise<string>((resolve) => {
-      execFile(
-        "git", ["show", `${ref}:${filePath}`],
-        { cwd, maxBuffer: 10 * 1024 * 1024, encoding: "buffer" },
-        (err, stdout) => {
-          if (err) return resolve("");
-          resolve((stdout as unknown as Buffer).toString("utf8"));
-        }
-      );
-    });
+    return gitQuery(["show", `${ref}:${filePath}`], cwd);
   }
 }
