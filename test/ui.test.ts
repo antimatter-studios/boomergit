@@ -106,6 +106,24 @@ describe("buildBadgeMenu", () => {
     expect(buildBadgeMenu(branch, commit(), "main").split("\n\n")).toHaveLength(4);
   });
 
+  it("acts on the full ref name even when the badge shows a shortened one", () => {
+    // The badge elides the middle; checkout must still get the real name
+    const longName = "origin/dependabot/github_actions/github-actions-bc056f11d8";
+    const md = buildBadgeMenu({ name: longName, type: "remote" }, commit());
+    expect(linkArgs(md, "boomergit.checkoutRef")).toEqual([longName, "remote"]);
+  });
+
+  it("copies the full ref name, not the shortened one", () => {
+    const longName = "origin/fix/cost-allocation-tag-premature-activation";
+    const md = buildBadgeMenu({ name: longName, type: "branch" }, commit());
+    const copyArgs = md
+      .split("\n\n")
+      .map((entry) => linkArgs(entry, "boomergit.copyText"))
+      .filter(Boolean)
+      .find((a) => (a as string[])[0] === longName);
+    expect(copyArgs).toBeDefined();
+  });
+
   it("escapes a ref name safely into the command arguments", () => {
     const md = buildBadgeMenu({ name: "feat/a b&c", type: "branch" }, commit());
     expect(linkArgs(md, "boomergit.checkoutRef")).toEqual(["feat/a b&c", "branch"]);

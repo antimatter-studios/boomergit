@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { parseRefs, refBadgeText, REF_SIGIL_WIDTH } from "../src/git/types.js";
+import {
+  parseRefs,
+  refBadgeText,
+  badgeName,
+  REF_SIGIL_WIDTH,
+  MAX_BADGE_NAME_LEN,
+} from "../src/git/types.js";
 import { parseLogOutput } from "../src/git/parser.js";
 
 describe("parseRefs", () => {
@@ -151,6 +157,75 @@ describe("parseRefs (--decorate=full)", () => {
     expect(parseRefs("origin/HEAD -> origin/main")).toEqual([
       { name: "origin/HEAD", type: "remote" },
     ]);
+  });
+});
+
+describe("badgeName", () => {
+  it("leaves a name that already fits untouched", () => {
+    expect(badgeName("origin/claude/fork-pages-actions-source")).toBe(
+      "origin/claude/fork-pages-actions-source"
+    );
+  });
+
+  it("leaves a name exactly at the limit untouched", () => {
+    const exact = "x".repeat(MAX_BADGE_NAME_LEN);
+    expect(badgeName(exact)).toBe(exact);
+  });
+
+  it("elides the middle of a longer name", () => {
+    const name = "origin/dependabot/github_actions/github-actions-bc056f11d8";
+    const shortened = badgeName(name);
+    expect(shortened).toHaveLength(MAX_BADGE_NAME_LEN);
+    expect(shortened).toContain("…");
+    expect(shortened.startsWith("origin/dependabot/")).toBe(true);
+    expect(shortened.endsWith("056f11d8")).toBe(true);
+  });
+
+  it("keeps the distinctive tail, which is what tells two branches apart", () => {
+    const a = badgeName("origin/claude/a-very-long-generated-branch-name-aaaaaa-1nr4n");
+    const b = badgeName("origin/claude/a-very-long-generated-branch-name-aaaaaa-j5kvg");
+    expect(a).not.toBe(b);
+  });
+
+  it("never exceeds the limit however long the input", () => {
+    for (const len of [49, 50, 51, 80, 300]) {
+      expect(badgeName("y".repeat(len)).length).toBeLessThanOrEqual(MAX_BADGE_NAME_LEN);
+    }
+  });
+});
+
+describe("badge run length (VS Code splits styled runs over 50 chars)", () => {
+  /**
+   * The name pill is decorated as one run: the name plus its trailing space.
+   * A run longer than 50 characters is split into separate spans by VS Code's
+   * line renderer, and each span gets the pill CSS — which is what produced a
+   * second badge holding the overflow.
+   */
+  const VSCODE_LONG_RUN_LIMIT = 50;
+
+  it("keeps the name run within the limit for a pathological name", () => {
+    const ref = { name: "origin/" + "long-".repeat(40) + "end", type: "remote" } as const;
+    const token = refBadgeText(ref);
+    const nameRun = token.slice(REF_SIGIL_WIDTH);
+    expect(nameRun.length).toBeLessThanOrEqual(VSCODE_LONG_RUN_LIMIT);
+  });
+
+  it("keeps the name run within the limit for every real-world case that split", () => {
+    // The four badges observed rendering as two pills, all 50 chars at the seam
+    const observed = [
+      "origin/fix/cost-allocation-tag-premature-activation",
+      "origin/claude/domains-microstack-boilerplate-1nr4nr",
+      "origin/dependabot/github_actions/github-actions-bc056f11d8",
+      "origin/claude/henry-graeser-elevated-access-ghs6cf1",
+    ];
+    for (const name of observed) {
+      const nameRun = refBadgeText({ name, type: "remote" }).slice(REF_SIGIL_WIDTH);
+      expect(nameRun.length).toBeLessThanOrEqual(VSCODE_LONG_RUN_LIMIT);
+    }
+  });
+
+  it("leaves the sigil run far below the limit", () => {
+    expect(REF_SIGIL_WIDTH).toBeLessThan(VSCODE_LONG_RUN_LIMIT);
   });
 });
 

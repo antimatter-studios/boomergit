@@ -56,13 +56,42 @@ export const REF_LABEL: Record<RefType, string> = {
 export const REF_SIGIL_WIDTH = 3;
 
 /**
+ * Longest ref name a badge will show.
+ *
+ * VS Code's line renderer splits any styled run longer than 50 characters into
+ * separate spans, and a decoration's CSS is applied to each span
+ * independently — so a badge whose name run exceeds that renders as *two*
+ * pills, the second holding the overflow: `…premature-activatio` followed by a
+ * lone `n`, or a pill containing nothing but the trailing space.
+ *
+ * The name run is the name plus one trailing space, so the cap has to leave
+ * room for it. 48 keeps a margin under the limit.
+ */
+export const MAX_BADGE_NAME_LEN = 48;
+
+/**
+ * A ref name shortened to fit a badge, with the middle elided.
+ *
+ * Both ends are kept because both identify a branch: the remote and namespace
+ * prefix at the front, and the distinctive tail — a ticket number, a hash
+ * suffix — at the back. `Ref.name` itself stays full, so checkout, delete and
+ * copy still act on the real name.
+ */
+export function badgeName(name: string): string {
+  if (name.length <= MAX_BADGE_NAME_LEN) return name;
+  const kept = MAX_BADGE_NAME_LEN - 1; // one column for the ellipsis
+  const head = Math.ceil(kept / 2);
+  return `${name.slice(0, head)}…${name.slice(name.length - (kept - head))}`;
+}
+
+/**
  * Badge text as it appears in the graph document: " X name ".
  * The first REF_SIGIL_WIDTH chars are decorated as the white sigil box, the
  * rest as the commit-coloured name pill — so this is the single source of
  * truth for both the document provider and the decoration engine.
  */
 export function refBadgeText(ref: Ref): string {
-  return ` ${REF_SIGIL[ref.type]} ${ref.name} `;
+  return ` ${REF_SIGIL[ref.type]} ${badgeName(ref.name)} `;
 }
 
 /**

@@ -230,6 +230,32 @@ describe("ref badge decorations", () => {
     expect(hit?.commitHash).toBe("b".repeat(40));
   });
 
+  it("hit-tests a badge whose name was shortened to fit", () => {
+    // A name over the length cap is elided in the document; the click must
+    // still resolve to the ref, whose own name stays full.
+    const longName = "origin/dependabot/github_actions/github-actions-bc056f11d8";
+    const commits = [commit("a".repeat(40), { refs: [{ name: longName, type: "remote" }] })];
+    const { engine, editor, rows, text } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+
+    const badgeStart = text.indexOf(" R ");
+    const hit = engine.getRefAt(new Position(0, badgeStart + 6) as never);
+    expect(hit?.ref.name).toBe(longName);
+  });
+
+  it("renders a shortened badge as a single name pill, not two", () => {
+    const longName = "origin/fix/cost-allocation-tag-premature-activation";
+    const commits = [commit("a".repeat(40), { refs: [{ name: longName, type: "remote" }] })];
+    const { engine, editor, rows } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+
+    const laneColour = rows[0].commitColor;
+    const pills = decorationsWithCss(`background: ${laneColour}`);
+    // One decoration type, covering exactly one range
+    expect(pills).toHaveLength(1);
+    expect(editor.__decorations.get(pills[0])).toHaveLength(1);
+  });
+
   it("forgets hit ranges once decorations are cleared", () => {
     const commits = [commit("a".repeat(40), { refs })];
     const { engine, editor, rows, text } = setup(commits);
