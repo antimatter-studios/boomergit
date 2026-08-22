@@ -11,7 +11,7 @@ import type { GraphRow } from "./graph/types.js";
 import { computeGraphLayout } from "./graph/layout.js";
 import { GitGraphProvider } from "./providers/gitGraphProvider.js";
 import type { Commit } from "./git/types.js";
-import { GraphDecorationEngine } from "./decorations/graphDecorations.js";
+import { GraphDecorationEngine, findActiveLine } from "./decorations/graphDecorations.js";
 import { CommitInfoProvider } from "./providers/commitInfoProvider.js";
 import { ChangedFilesProvider } from "./providers/changedFilesProvider.js";
 import type { ChangedFile } from "./providers/changedFilesProvider.js";
@@ -369,9 +369,9 @@ export function activate(context: vscode.ExtensionContext) {
           }
         }
         if (!restored && currentBranch) {
-          const idx = commits.findIndex((c) =>
-            c.refs.some((r) => r.type === "branch" && r.name === currentBranch)
-          );
+          // Same predicate the decoration engine paints with, so the selected
+          // row and the highlighted row can't drift apart.
+          const idx = findActiveLine(commits, currentBranch);
           if (idx >= 0) {
             decorationEngine.selectRow(editor, idx);
             showSidebar(commits[idx], currentBranch);
@@ -430,6 +430,9 @@ export function activate(context: vscode.ExtensionContext) {
   const deleteBranchCmd = vscode.commands.registerCommand(
     "boomergit.deleteBranch",
     async (branchName: string) => {
+      // Before the prompt, not after: runGitAction's own guard would let the
+      // user answer a modal and then do nothing, with no message either way.
+      if (!workspaceCwd) return;
       const choice = await vscode.window.showWarningMessage(
         `Delete branch "${branchName}"?`,
         { modal: true, detail: "Use 'Force Delete' if the branch is not fully merged." },
@@ -448,6 +451,7 @@ export function activate(context: vscode.ExtensionContext) {
   const createBranchCmd = vscode.commands.registerCommand(
     "boomergit.createBranch",
     async (commitHash: string) => {
+      if (!workspaceCwd) return;
       const name = await vscode.window.showInputBox({
         prompt: "New branch name",
         placeHolder: "feature/my-branch",
@@ -606,7 +610,8 @@ export function activate(context: vscode.ExtensionContext) {
     if (selected.length !== 1) return;
 
     const lastLine = decorationEngine.getTotalRows() - 1;
-    const targetLine = Math.min(lastLine, Math.max(0, selected[0] + delta));
+    // max() outermost, so an empty graph (lastLine === -1) can't yield -1
+    const targetLine = Math.max(0, Math.min(lastLine, selected[0] + delta));
     decorationEngine.navigateTo(editor, targetLine);
     const commit = decorationEngine.getCommitAt(targetLine);
     if (commit) showSidebar(commit);

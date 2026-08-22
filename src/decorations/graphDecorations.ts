@@ -429,7 +429,7 @@ export class GraphDecorationEngine {
  * Local branches only: a remote-tracking ref of the same name is a different
  * commit in general, and highlighting it would be a lie.
  */
-function findActiveLine(commits: Commit[], currentBranch?: string): number {
+export function findActiveLine(commits: Commit[], currentBranch?: string): number {
   if (!currentBranch) return -1;
   return commits.findIndex((c) =>
     c.refs.some((r) => r.type === "branch" && r.name === currentBranch)

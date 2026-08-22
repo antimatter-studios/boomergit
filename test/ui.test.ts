@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { buildBadgeMenu, buildRowMenu } from "../src/ui/menus.js";
 import { resolveClickIntent } from "../src/ui/clickIntent.js";
-import { computeDiffTarget, EMPTY_REF } from "../src/ui/diffTarget.js";
+import { computeDiffTarget } from "../src/ui/diffTarget.js";
+import { EMPTY_REF } from "../src/providers/gitFileContentProvider.js";
 import { TIMING } from "../src/ui/timings.js";
 import { COLOR, REF_BADGE_COLOR } from "../src/ui/theme.js";
 import { REF_SIGIL, REF_LABEL, type Commit, type Ref } from "../src/git/types.js";
@@ -42,6 +43,18 @@ describe("buildBadgeMenu", () => {
 
   it("offers no checkout for a tag", () => {
     expect(buildBadgeMenu({ name: "v1.0", type: "tag" }, commit())).not.toContain("Checkout");
+  });
+
+  it("offers no checkout for a remote's symbolic HEAD", () => {
+    // git checkout HEAD exits 0 without changing branches, so offering it
+    // would report a checkout that never happened. Every clone has this ref.
+    const md = buildBadgeMenu({ name: "origin/HEAD", type: "remote" }, commit());
+    expect(md).not.toContain("Checkout");
+  });
+
+  it("still offers checkout for a branch legitimately named ...HEADless", () => {
+    const md = buildBadgeMenu({ name: "origin/HEADless", type: "remote" }, commit());
+    expect(md).toContain("Checkout Branch");
   });
 
   it.each(["stash", "note", "pr", "other", "head"] as const)(

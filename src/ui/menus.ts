@@ -11,6 +11,19 @@ import { COLOR } from "./theme.js";
  * command from trusted markdown.
  */
 
+/**
+ * Whether a ref names something `git checkout` can actually put you on.
+ *
+ * `origin/HEAD` is a symbolic ref naming the remote's default branch, and
+ * stripping the remote leaves `HEAD` — `git checkout HEAD` exits 0 without
+ * changing branches, so offering it would report a checkout that never
+ * happened. Every clone has that ref, so this is not a corner case.
+ */
+function isCheckoutable(ref: Ref): boolean {
+  if (ref.type === "branch") return true;
+  return ref.type === "remote" && !ref.name.endsWith("/HEAD");
+}
+
 /** Menu text has to be coloured explicitly; the hover widget's default is dim. */
 function enabled(text: string): string {
   return `<span style="color:${COLOR.menuText};">${text}</span>`;
@@ -44,14 +57,14 @@ function copyHashEntry(commit: Commit): string {
 /**
  * The menu for clicking a ref badge.
  *
- * Which entries appear depends on what the ref actually supports: only
- * branches and remote-tracking refs can be checked out, and only a local
- * branch can be deleted — and never the one currently checked out.
+ * Which entries appear depends on what the ref actually supports: see
+ * isCheckoutable for what can be checked out, and only a local branch can be
+ * deleted — never the one currently checked out.
  */
 export function buildBadgeMenu(ref: Ref, commit: Commit, currentBranch?: string): string {
   const entries: string[] = [];
 
-  if (ref.type === "branch" || ref.type === "remote") {
+  if (isCheckoutable(ref)) {
     entries.push(
       commandLink("$(git-branch)&ensp;Checkout Branch", "boomergit.checkoutRef", [
         ref.name,

@@ -744,6 +744,27 @@ describe("openFileDiff", () => {
   });
 });
 
+describe("prompting commands without a workspace", () => {
+  it("does not prompt before a delete it cannot perform", async () => {
+    workspace.workspaceFolders = undefined;
+    activate(context as never);
+    __state.nextWarningChoice = "Delete";
+    await __state.commands.get("boomergit.deleteBranch")!("feature");
+    // Asking, then silently doing nothing, is worse than not asking
+    expect(__state.warningMessages).toEqual([]);
+    expect(__state.infoMessages).toEqual([]);
+    expect(__state.errorMessages).toEqual([]);
+  });
+
+  it("does not prompt for a branch name it would discard", async () => {
+    workspace.workspaceFolders = undefined;
+    activate(context as never);
+    __state.nextInputBoxValue = "my-branch";
+    await __state.commands.get("boomergit.createBranch")!("c".repeat(40));
+    expect(window.showInputBox).not.toHaveBeenCalled();
+  });
+});
+
 describe("guards before the graph is open", () => {
   it("ignores a checkout with no workspace", async () => {
     workspace.workspaceFolders = undefined;
