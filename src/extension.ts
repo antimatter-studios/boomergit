@@ -1,17 +1,28 @@
 import * as vscode from "vscode";
-import { execFile } from "node:child_process";
 import { parseGitLog } from "./git/parser.js";
+import { gitRun, gitQuery, gitQueryTrimmed } from "./git/exec.js";
+import { localBranchName } from "./git/types.js";
+import { TIMING } from "./ui/timings.js";
+import { COLOR } from "./ui/theme.js";
+import { buildBadgeMenu, buildRowMenu } from "./ui/menus.js";
+import { resolveClickIntent } from "./ui/clickIntent.js";
+import { computeDiffTarget } from "./ui/diffTarget.js";
+import type { GraphRow } from "./graph/types.js";
 import { computeGraphLayout } from "./graph/layout.js";
 import { GitGraphProvider } from "./providers/gitGraphProvider.js";
 import type { Commit } from "./git/types.js";
 import { GraphDecorationEngine } from "./decorations/graphDecorations.js";
-import { CommitInfoProvider, ChangedFilesProvider } from "./providers/commitDetailProvider.js";
-import type { ChangedFile } from "./providers/commitDetailProvider.js";
+import { CommitInfoProvider } from "./providers/commitInfoProvider.js";
+import { ChangedFilesProvider } from "./providers/changedFilesProvider.js";
+import type { ChangedFile } from "./providers/changedFilesProvider.js";
 import { GitFileContentProvider, FILE_SCHEME, fileUri } from "./providers/gitFileContentProvider.js";
 
 const SCHEME = "boomergit";
 const DISPLAY_NAME = "BoomerGit";
 const TITLE = `${DISPLAY_NAME} - Git Graph`;
+
+/** Status bar priority — higher sits further left among right-aligned items. */
+const STATUS_BAR_PRIORITY = 100;
 
 export function activate(context: vscode.ExtensionContext) {
   const graphProvider = new GitGraphProvider();
@@ -21,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
   const wbConfig = vscode.workspace.getConfiguration("workbench");
   const colors = wbConfig.get<Record<string, string>>("colorCustomizations") ?? {};
   const hoverColors: Record<string, string> = {
-    "editorHoverWidget.border": "#ffffff",
+    "editorHoverWidget.border": COLOR.hoverWidgetBorder,
   };
   const merged = { ...colors, ...hoverColors };
   wbConfig.update("colorCustomizations", merged, vscode.ConfigurationTarget.Global);
@@ -85,7 +96,7 @@ export function activate(context: vscode.ExtensionContext) {
   let decorationEngine: GraphDecorationEngine | undefined;
   let workspaceCwd: string | undefined;
   let currentBranch: string | undefined;
-  let lastRows: import("./graph/types.js").GraphRow[] | undefined;
+  let lastRows: GraphRow[] | undefined;
   let lastCommits: Commit[] | undefined;
   // Left-click → toggle hover menu; Cmd-click → select rows for compare
   let lastHoverKey: string | undefined;
@@ -99,7 +110,10 @@ export function activate(context: vscode.ExtensionContext) {
   let lastRefSig: string | undefined;
   let autoRefreshEnabled = vscode.workspace.getConfiguration("boomergit").get<boolean>("autoRefresh", false);
 
-  const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  const statusBar = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    STATUS_BAR_PRIORITY
+  );
   statusBar.command = "boomergit.toggleAutoRefresh";
   function updateStatusBar(): void {
     if (!isGraphEditorOpen()) { statusBar.hide(); return; }
@@ -113,11 +127,25 @@ export function activate(context: vscode.ExtensionContext) {
       if (editor.document.uri.scheme !== SCHEME) return;
       const lineLen = editor.document.lineAt(pos.line).text.length;
       const resetCol = pos.character === 0 ? lineLen : 0;
-      ignoreSelectionUntil = Date.now() + 200;
+      ignoreSelectionUntil = Date.now() + TIMING.ignoreSelfSelectionMs;
       editor.selection = new vscode.Selection(pos.line, resetCol, pos.line, resetCol);
     };
     if (delayMs > 0) setTimeout(doReset, delayMs);
     else doReset();
+  }
+
+  /**
+   * Open the click menu (a hover we trigger ourselves) on the clicked row.
+   *
+   * Deferred rather than immediate: the hover renders wherever the cursor is,
+   * so asking for it before VS Code finishes handling the click puts the menu
+   * on the previous row.
+   */
+  function openClickMenu(): void {
+    setTimeout(() => {
+      hoverTriggeredByClick = true;
+      vscode.commands.executeCommand("editor.action.showHover");
+    }, TIMING.openMenuMs);
   }
 
   function showSidebar(commit: Commit, activeRefName?: string): void {
@@ -141,7 +169,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Collapse multi-cursors back to single cursor
     if (isCmdClick) {
-      ignoreSelectionUntil = Date.now() + 200;
+      ignoreSelectionUntil = Date.now() + TIMING.ignoreSelfSelectionMs;
       e.textEditor.selection = new vscode.Selection(pos, pos);
     }
 
@@ -149,12 +177,17 @@ export function activate(context: vscode.ExtensionContext) {
     if (!commit) return;
 
     const refHit = decorationEngine.getRefAt(pos);
-    const hasSelections = decorationEngine.getSelectedRows().length > 0;
+    const intent = resolveClickIntent({
+      isCmdClick,
+      onBadge: !!refHit,
+      hasSelections: decorationEngine.getSelectedRows().length > 0,
+    });
     let showingMenu = false;
 
-    if (refHit && !isCmdClick) {
-      // Badge click: clear selections, show badge menu, update sidebar with this ref as title
-      decorationEngine.clearSelections(e.textEditor);
+    if (intent === "badge-menu" && refHit) {
+      // Title the sidebar after the badge, and toggle its menu: clicking the
+      // same badge twice closes rather than reopens.
+      decorationEngine.clearSelections();
       showSidebar(commit, refHit.ref.name);
       const key = `ref:${pos.line}:${refHit.ref.name}`;
       if (lastHoverKey === key) {
@@ -162,43 +195,25 @@ export function activate(context: vscode.ExtensionContext) {
       } else {
         lastHoverKey = key;
         showingMenu = true;
-        setTimeout(() => {
-          hoverTriggeredByClick = true;
-          vscode.commands.executeCommand("editor.action.showHover");
-        }, 50);
+        openClickMenu();
       }
-    } else if (isCmdClick) {
-      // Cmd-click: add row to selection, open menu on it
+    } else if (intent === "select-row") {
       lastHoverKey = undefined;
       decorationEngine.selectRow(e.textEditor, pos.line);
       showSidebar(commit);
       showingMenu = true;
-      setTimeout(() => {
-        hoverTriggeredByClick = true;
-        vscode.commands.executeCommand("editor.action.showHover");
-      }, 50);
-    } else if (hasSelections) {
-      // Plain click while rows are selected → dismiss everything
+      openClickMenu();
+    } else {
       lastHoverKey = undefined;
-      decorationEngine.clearSelections(e.textEditor);
+      decorationEngine.clearSelections();
       commitInfoProvider.clear();
       changedFilesProvider.clear();
-    } else {
-      // Plain click, nothing selected → select row and open menu
-      lastHoverKey = undefined;
-      decorationEngine.selectRow(e.textEditor, pos.line);
-      showSidebar(commit);
-      showingMenu = true;
-      setTimeout(() => {
-        hoverTriggeredByClick = true;
-        vscode.commands.executeCommand("editor.action.showHover");
-      }, 50);
     }
 
     // Always reset cursor so the next click at the same spot still fires.
     // Delay when showing a menu so the hover appears at the right position first.
     if (!isCmdClick) {
-      resetCursor(e.textEditor, pos, showingMenu ? 250 : 0);
+      resetCursor(e.textEditor, pos, showingMenu ? TIMING.cursorResetWithMenuMs : 0);
     }
   });
 
@@ -228,41 +243,12 @@ export function activate(context: vscode.ExtensionContext) {
         md.supportHtml = true;
         md.supportThemeIcons = true;
 
-        const white = (text: string) => `<span style="color:#ffffff;">${text}</span>`;
-
         if (refHit) {
-          // Badge menu
-          const ref = refHit.ref;
-          if (ref.type === "branch" || ref.type === "remote") {
-            const args = encodeURIComponent(JSON.stringify([ref.name, ref.type]));
-            md.appendMarkdown(`[${white("$(git-branch)&ensp;Checkout Branch")}](command:boomergit.checkoutRef?${args})\n\n`);
-          }
-          if (ref.type === "branch") {
-            const isCurrent = ref.name === currentBranch;
-            if (isCurrent) {
-              const grey = (text: string) => `<span style="color:#888888;">${text}</span>`;
-              md.appendMarkdown(`${grey("$(trash)&ensp;Cannot delete current branch")}\n\n`);
-            } else {
-              const delArgs = encodeURIComponent(JSON.stringify([ref.name]));
-              md.appendMarkdown(`[${white("$(trash)&ensp;Delete Branch")}](command:boomergit.deleteBranch?${delArgs})\n\n`);
-            }
-          }
-          const copyRefArgs = encodeURIComponent(JSON.stringify([ref.name, `Copied: ${ref.name}`]));
-          md.appendMarkdown(`[${white("$(clippy)&ensp;Copy Ref Name")}](command:boomergit.copyText?${copyRefArgs})\n\n`);
-          const copyHashArgs = encodeURIComponent(JSON.stringify([commit.hash, `Copied: ${commit.hash.slice(0, 8)}`]));
-          md.appendMarkdown(`[${white("$(git-commit)&ensp;Copy Commit Hash")}](command:boomergit.copyText?${copyHashArgs})`);
+          md.appendMarkdown(buildBadgeMenu(refHit.ref, commit, currentBranch));
           return new vscode.Hover(md, refHit.range);
-        } else {
-          // Row menu (commit actions)
-          const createArgs = encodeURIComponent(JSON.stringify([commit.hash]));
-          md.appendMarkdown(`[${white("$(git-branch)&ensp;Create Branch Here")}](command:boomergit.createBranch?${createArgs})\n\n`);
-          const copyHashArgs = encodeURIComponent(JSON.stringify([commit.hash, `Copied: ${commit.hash.slice(0, 8)}`]));
-          md.appendMarkdown(`[${white("$(git-commit)&ensp;Copy Commit Hash")}](command:boomergit.copyText?${copyHashArgs})\n\n`);
-          const copyMsgArgs = encodeURIComponent(JSON.stringify([commit.subject, "Copied commit message"]));
-          md.appendMarkdown(`[${white("$(note)&ensp;Copy Commit Message")}](command:boomergit.copyText?${copyMsgArgs})`);
-          const range = new vscode.Range(position.line, 0, position.line, 0);
-          return new vscode.Hover(md, range);
         }
+        md.appendMarkdown(buildRowMenu(commit));
+        return new vscode.Hover(md, new vscode.Range(position.line, 0, position.line, 0));
       },
     }
   );
@@ -314,10 +300,7 @@ export function activate(context: vscode.ExtensionContext) {
         prevTopLine = ge?.visibleRanges[0]?.start.line;
       }
 
-      currentBranch = await new Promise<string>((resolve) => {
-        execFile("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: workspaceCwd },
-          (err, stdout) => resolve(err ? "" : stdout.trim()));
-      });
+      currentBranch = await gitQueryTrimmed(["rev-parse", "--abbrev-ref", "HEAD"], workspaceCwd);
 
       const commits = await parseGitLog(workspaceCwd);
       if (commits.length === 0) return;
@@ -337,7 +320,7 @@ export function activate(context: vscode.ExtensionContext) {
           }
         });
         // Fallback in case the content didn't actually change
-        setTimeout(() => { sub.dispose(); resolve(); }, 200);
+        setTimeout(() => { sub.dispose(); resolve(); }, TIMING.documentUpdateMs);
       });
 
       const doc = await vscode.workspace.openTextDocument(uri);
@@ -413,36 +396,40 @@ export function activate(context: vscode.ExtensionContext) {
     finally { refreshing = false; }
   }
 
+  /**
+   * Run a git command that changes the repository, then refresh the graph.
+   *
+   * Every repository-mutating command shares this shape: the user gets a
+   * confirmation on success, or git's own message on failure, and either way
+   * the graph ends up reflecting reality.
+   */
+  async function runGitAction(
+    args: string[],
+    successMessage: string,
+    failurePrefix: string
+  ): Promise<void> {
+    if (!workspaceCwd) return;
+    try {
+      await gitRun(args, workspaceCwd);
+      vscode.window.showInformationMessage(successMessage);
+      await refreshGraph();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      vscode.window.showErrorMessage(`${failurePrefix}: ${msg}`);
+    }
+  }
+
   const checkoutRefCmd = vscode.commands.registerCommand(
     "boomergit.checkoutRef",
     async (name: string, type: string) => {
-      if (!workspaceCwd) return;
-      let branchName = name;
-      if (type === "remote") {
-        const slashIdx = branchName.indexOf("/");
-        if (slashIdx >= 0) branchName = branchName.slice(slashIdx + 1);
-      }
-      try {
-        await new Promise<void>((resolve, reject) => {
-          execFile("git", ["checkout", branchName], { cwd: workspaceCwd },
-            (err, _stdout, stderr) => {
-              if (err) return reject(new Error(stderr || err.message));
-              resolve();
-            });
-        });
-        vscode.window.showInformationMessage(`Checked out: ${branchName}`);
-        await refreshGraph();
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        vscode.window.showErrorMessage(`Checkout failed: ${msg}`);
-      }
+      const branchName = type === "remote" ? localBranchName(name) : name;
+      await runGitAction(["checkout", branchName], `Checked out: ${branchName}`, "Checkout failed");
     }
   );
 
   const deleteBranchCmd = vscode.commands.registerCommand(
     "boomergit.deleteBranch",
     async (branchName: string) => {
-      if (!workspaceCwd) return;
       const choice = await vscode.window.showWarningMessage(
         `Delete branch "${branchName}"?`,
         { modal: true, detail: "Use 'Force Delete' if the branch is not fully merged." },
@@ -450,46 +437,27 @@ export function activate(context: vscode.ExtensionContext) {
       );
       if (!choice) return;
       const flag = choice === "Force Delete" ? "-D" : "-d";
-      try {
-        await new Promise<void>((resolve, reject) => {
-          execFile("git", ["branch", flag, branchName], { cwd: workspaceCwd },
-            (err, _stdout, stderr) => {
-              if (err) return reject(new Error(stderr || err.message));
-              resolve();
-            });
-        });
-        vscode.window.showInformationMessage(`Deleted branch: ${branchName}`);
-        await refreshGraph();
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        vscode.window.showErrorMessage(`Delete failed: ${msg}`);
-      }
+      await runGitAction(
+        ["branch", flag, branchName],
+        `Deleted branch: ${branchName}`,
+        "Delete failed"
+      );
     }
   );
 
   const createBranchCmd = vscode.commands.registerCommand(
     "boomergit.createBranch",
     async (commitHash: string) => {
-      if (!workspaceCwd) return;
       const name = await vscode.window.showInputBox({
         prompt: "New branch name",
         placeHolder: "feature/my-branch",
       });
       if (!name) return;
-      try {
-        await new Promise<void>((resolve, reject) => {
-          execFile("git", ["branch", name, commitHash], { cwd: workspaceCwd },
-            (err, _stdout, stderr) => {
-              if (err) return reject(new Error(stderr || err.message));
-              resolve();
-            });
-        });
-        vscode.window.showInformationMessage(`Created branch: ${name}`);
-        await refreshGraph();
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        vscode.window.showErrorMessage(`Create branch failed: ${msg}`);
-      }
+      await runGitAction(
+        ["branch", name, commitHash],
+        `Created branch: ${name}`,
+        "Create branch failed"
+      );
     }
   );
 
@@ -504,19 +472,10 @@ export function activate(context: vscode.ExtensionContext) {
   const openFileDiffCmd = vscode.commands.registerCommand(
     "boomergit.openFileDiff",
     async (file: ChangedFile, commitHash: string, parentHash: string, cwd: string) => {
-      const leftRef = (file.status === "A" || !parentHash) ? "empty" : parentHash;
-      const rightRef = file.status === "D" ? "empty" : commitHash;
-      const leftPath = file.oldPath ?? file.path;
-      const rightPath = file.path;
-
-      const leftLabel = leftRef === "empty" ? "New File" : `Parent ${parentHash.slice(0, 8)}`;
-      const rightLabel = rightRef === "empty" ? "Deleted" : `Commit ${commitHash.slice(0, 8)}`;
-
-      const leftUri = fileUri(leftPath, leftRef, cwd, leftLabel);
-      const rightUri = fileUri(rightPath, rightRef, cwd, rightLabel);
-
-      const basename = rightPath.split("/").pop() || rightPath;
-      const title = `${basename} (${leftLabel} ↔ ${rightLabel})`;
+      const target = computeDiffTarget(file, commitHash, parentHash);
+      const leftUri = fileUri(target.leftPath, target.leftRef, cwd, target.leftLabel);
+      const rightUri = fileUri(target.rightPath, target.rightRef, cwd, target.rightLabel);
+      const title = target.title;
 
       const groups = vscode.window.tabGroups.all;
       if (groups.length >= 2) {
@@ -561,7 +520,10 @@ export function activate(context: vscode.ExtensionContext) {
       await vscode.workspace.getConfiguration("boomergit")
         .update("autoRefresh", autoRefreshEnabled, vscode.ConfigurationTarget.Global);
       updateStatusBar();
-      vscode.window.setStatusBarMessage(`BoomerGit auto-refresh ${autoRefreshEnabled ? "on" : "off"}`, 2000);
+      vscode.window.setStatusBarMessage(
+        `BoomerGit auto-refresh ${autoRefreshEnabled ? "on" : "off"}`,
+        TIMING.toastMs
+      );
     }
   );
 
@@ -576,16 +538,14 @@ export function activate(context: vscode.ExtensionContext) {
   // A cheap signature of all ref OIDs + HEAD. Refs cover commits/rebase/fetch/
   // merge/branch+tag ops; HEAD covers checkout. Used to dedupe refresh triggers
   // so we only do the real (expensive) refresh when refs actually moved.
-  function getRefSignature(): Promise<string> {
-    if (!workspaceCwd) return Promise.resolve("");
-    const run = (args: string[]) => new Promise<string>((resolve) => {
-      execFile("git", args, { cwd: workspaceCwd, maxBuffer: 10 * 1024 * 1024 },
-        (err, stdout) => resolve(err ? "" : stdout));
-    });
-    return Promise.all([
-      run(["for-each-ref", "--format=%(objectname) %(refname)"]),
-      run(["rev-parse", "HEAD"]),
-    ]).then(([refs, head]) => refs + head);
+  async function getRefSignature(): Promise<string> {
+    if (!workspaceCwd) return "";
+    const cwd = workspaceCwd;
+    const [refs, head] = await Promise.all([
+      gitQuery(["for-each-ref", "--format=%(objectname) %(refname)"], cwd),
+      gitQuery(["rev-parse", "HEAD"], cwd),
+    ]);
+    return refs + head;
   }
 
   async function maybeAutoRefresh(): Promise<void> {
@@ -629,39 +589,42 @@ export function activate(context: vscode.ExtensionContext) {
 
   void setupGitEventTrigger().then((ok) => {
     if (ok) return;
-    autoRefreshTimer = setInterval(() => { void maybeAutoRefresh(); }, 3000);
+    autoRefreshTimer = setInterval(() => { void maybeAutoRefresh(); }, TIMING.refreshPollMs);
   });
 
-  const selectUpCmd = vscode.commands.registerCommand("boomergit.selectUp", () => {
+  /**
+   * Move the single-row selection by one row and follow it with the sidebar.
+   *
+   * Only acts on a single selection: with two rows picked for compare, the
+   * arrow keys would have no obvious row to move.
+   */
+  function moveSelection(delta: -1 | 1): void {
     if (!decorationEngine) return;
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.uri.scheme !== SCHEME) return;
     const selected = decorationEngine.getSelectedRows();
     if (selected.length !== 1) return;
-    const targetLine = Math.max(0, selected[0] - 1);
-    decorationEngine.navigateTo(editor, targetLine);
-    const commit = decorationEngine.getCommitAt(targetLine);
-    if (commit) showSidebar(commit);
-    ignoreSelectionUntil = Date.now() + 200;
-    editor.selection = new vscode.Selection(targetLine, 0, targetLine, 0);
-    editor.revealRange(new vscode.Range(targetLine, 0, targetLine, 0), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-  });
 
-  const selectDownCmd = vscode.commands.registerCommand("boomergit.selectDown", () => {
-    if (!decorationEngine) return;
-    const editor = vscode.window.activeTextEditor;
-    if (!editor || editor.document.uri.scheme !== SCHEME) return;
-    const selected = decorationEngine.getSelectedRows();
-    if (selected.length !== 1) return;
-    const maxLine = decorationEngine.getTotalRows() - 1;
-    const targetLine = Math.min(maxLine, selected[0] + 1);
+    const lastLine = decorationEngine.getTotalRows() - 1;
+    const targetLine = Math.min(lastLine, Math.max(0, selected[0] + delta));
     decorationEngine.navigateTo(editor, targetLine);
     const commit = decorationEngine.getCommitAt(targetLine);
     if (commit) showSidebar(commit);
-    ignoreSelectionUntil = Date.now() + 200;
+
+    ignoreSelectionUntil = Date.now() + TIMING.ignoreSelfSelectionMs;
     editor.selection = new vscode.Selection(targetLine, 0, targetLine, 0);
-    editor.revealRange(new vscode.Range(targetLine, 0, targetLine, 0), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-  });
+    editor.revealRange(
+      new vscode.Range(targetLine, 0, targetLine, 0),
+      vscode.TextEditorRevealType.InCenterIfOutsideViewport
+    );
+  }
+
+  const selectUpCmd = vscode.commands.registerCommand("boomergit.selectUp", () =>
+    moveSelection(-1)
+  );
+  const selectDownCmd = vscode.commands.registerCommand("boomergit.selectDown", () =>
+    moveSelection(1)
+  );
 
   context.subscriptions.push(
     providerReg, fileProviderReg, sidebarView, showGraphCmd, checkoutRefCmd, deleteBranchCmd, createBranchCmd, copyTextCmd, hoverProvider, selectionWatcher,
