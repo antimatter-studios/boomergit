@@ -1,13 +1,56 @@
 import * as vscode from "vscode";
 import { refBadgeText, REF_SIGIL_WIDTH, type Commit, type Ref } from "../git/types.js";
+import { SHORT_HASH_LEN } from "../git/format.js";
 import type { GraphRow } from "../graph/types.js";
 import { SvgTileCache, COL_WIDTH } from "../graph/svgTileGen.js";
+import { COLOR } from "../ui/theme.js";
+import { TIMING } from "../ui/timings.js";
 
 export interface RefHit {
   ref: Ref;
   commitHash: string;
   range: vscode.Range;
 }
+
+/**
+ * Where ref badges begin in a rendered line: two spaces, the short hash, two
+ * more spaces. Searching for badges from here stops a badge-shaped substring
+ * in a commit subject from being mistaken for a real badge.
+ */
+const BADGE_SEARCH_START = 2 + SHORT_HASH_LEN + 2;
+
+/** Ranges to paint, grouped by what they are. */
+interface TextRanges {
+  hash: vscode.DecorationOptions[];
+  author: vscode.DecorationOptions[];
+  date: vscode.DecorationOptions[];
+  /** The " X " type box at the head of every badge — same style for all. */
+  sigil: vscode.DecorationOptions[];
+  /** Badge name pills, grouped by the lane colour they take. */
+  nameByLaneColor: Map<string, vscode.DecorationOptions[]>;
+}
+
+/**
+ * Smuggle arbitrary CSS into a decoration through `textDecoration`.
+ *
+ * VS Code offers no general style hook, but it passes `textDecoration` to the
+ * DOM verbatim, so a leading `none;` closes that property and everything after
+ * it applies to the decorated span. This is the only way to get a background
+ * that respects the inline-block box: the API's own `backgroundColor` always
+ * fills the full line height, which makes a badge a stripe rather than a pill.
+ */
+function injectCss(declarations: Record<string, string>): string {
+  const css = Object.entries(declarations)
+    .map(([property, value]) => `${property}: ${value}`)
+    .join("; ");
+  return `none; ${css}`;
+}
+
+/** Shared shape of a badge half: a pill segment sized to its own text. */
+const BADGE_BOX = {
+  display: "inline-block",
+  "line-height": "1.3",
+};
 
 export class GraphDecorationEngine {
   private svgCache: SvgTileCache;
@@ -34,26 +77,15 @@ export class GraphDecorationEngine {
     const globalMaxCols = Math.max(...rows.map((r) => r.numCols), 1);
     const tileWidth = globalMaxCols * COL_WIDTH + COL_WIDTH;
 
-    // Find the line with the active branch
-    this.activeLine = -1;
-    if (currentBranch) {
-      for (let i = 0; i < commits.length; i++) {
-        if (commits[i].refs.some((r) => r.type === "branch" && r.name === currentBranch)) {
-          this.activeLine = i;
-          break;
-        }
-      }
-    }
-    const activeLine = this.activeLine;
+    this.activeLine = findActiveLine(commits, currentBranch);
 
     for (let i = 0; i < rows.length && i < commits.length; i++) {
-      const row = rows[i];
-      const svgPath = this.svgCache.getTilePath(row, lineHeight, globalMaxCols);
+      const svgPath = this.svgCache.getTilePath(rows[i], lineHeight, globalMaxCols);
+      const isActive = i === this.activeLine;
 
-      const isActive = i === activeLine;
       const decorationType = vscode.window.createTextEditorDecorationType({
-        backgroundColor: isActive ? "#ffffff" : undefined,
-        color: isActive ? "#1e1e1e" : undefined,
+        backgroundColor: isActive ? COLOR.activeRowBackground : undefined,
+        color: isActive ? COLOR.activeRowText : undefined,
         fontWeight: isActive ? "bold" : undefined,
         isWholeLine: isActive,
         before: {
@@ -61,16 +93,15 @@ export class GraphDecorationEngine {
           margin: "0 4px 0 0",
           width: `${tileWidth}px`,
           height: `${lineHeight}px`,
-          textDecoration: "none; vertical-align: top",
+          textDecoration: injectCss({ "vertical-align": "top" }),
         },
       });
 
-      const range = new vscode.Range(i, 0, i, 0);
-      editor.setDecorations(decorationType, [range]);
+      editor.setDecorations(decorationType, [new vscode.Range(i, 0, i, 0)]);
       this.decorationTypes.push(decorationType);
     }
 
-    this.applyTextColors(editor, commits, rows, activeLine);
+    this.applyTextColors(editor, commits, rows);
   }
 
   /**
@@ -118,108 +149,145 @@ export class GraphDecorationEngine {
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
   }
 
-  private applyTextColors(editor: vscode.TextEditor, commits: Commit[], rows: GraphRow[], activeLine: number = -1): void {
-    const hashRanges: vscode.DecorationOptions[] = [];
-    const authorRanges: vscode.DecorationOptions[] = [];
-    const dateRanges: vscode.DecorationOptions[] = [];
-    // Group ref badge ranges by commit color so each gets matching dot color
-    const refByColor = new Map<string, vscode.DecorationOptions[]>();
-    // The " X " type sigil at the head of every badge — white box, same for all
-    const sigilRanges: vscode.DecorationOptions[] = [];
+  private applyTextColors(editor: vscode.TextEditor, commits: Commit[], rows: GraphRow[]): void {
+    const ranges = this.collectRanges(editor, commits, rows);
+    this.paintRanges(editor, ranges);
+  }
+
+  /**
+   * Locate every span worth colouring in the rendered document.
+   *
+   * Also records each badge's full extent in `refHits`, which is what turns a
+   * click position back into the ref it landed on.
+   */
+  private collectRanges(
+    editor: vscode.TextEditor,
+    commits: Commit[],
+    rows: GraphRow[]
+  ): TextRanges {
+    const ranges: TextRanges = {
+      hash: [],
+      author: [],
+      date: [],
+      sigil: [],
+      nameByLaneColor: new Map(),
+    };
 
     for (let i = 0; i < commits.length && i < rows.length; i++) {
-      const line = editor.document.lineAt(i);
-      const text = line.text;
+      const text = editor.document.lineAt(i).text;
       const commit = commits[i];
-      const commitColor = rows[i].commitColor;
 
       const hashMatch = text.match(/^\s*([0-9a-f]{8})/);
       if (hashMatch) {
         const start = text.indexOf(hashMatch[1]);
-        hashRanges.push({
-          range: new vscode.Range(i, start, i, start + 8),
-        });
+        ranges.hash.push({ range: new vscode.Range(i, start, i, start + SHORT_HASH_LEN) });
       }
 
-      // Find each ref token: " X name " appearing after the hash
-      let searchFrom = 10; // past "  {hash}  "
-      for (const ref of commit.refs) {
-        const token = refBadgeText(ref);
-        const idx = text.indexOf(token, searchFrom);
-        if (idx >= 0) {
-          const sigilEnd = idx + REF_SIGIL_WIDTH;
-          sigilRanges.push({ range: new vscode.Range(i, idx, i, sigilEnd) });
-          const nameRange = new vscode.Range(i, sigilEnd, i, idx + token.length);
-          if (!refByColor.has(commitColor)) {
-            refByColor.set(commitColor, []);
-          }
-          refByColor.get(commitColor)!.push({ range: nameRange });
-          // Hit range spans the whole badge so clicking the sigil works too
-          const range = new vscode.Range(i, idx, i, idx + token.length);
-          this.refHits.push({ ref, commitHash: commit.hash, range });
-          searchFrom = idx + token.length;
-        }
-      }
+      this.collectBadgeRanges(ranges, text, i, commit, rows[i].commitColor);
 
       const dateMatch = text.match(/(\d{4}-\d{2}-\d{2})\s*$/);
       if (dateMatch) {
         const start = text.lastIndexOf(dateMatch[1]);
-        dateRanges.push({
-          range: new vscode.Range(i, start, i, start + 10),
-        });
+        ranges.date.push({ range: new vscode.Range(i, start, i, start + 10) });
       }
 
       const authorIdx = text.lastIndexOf(commit.author);
       if (authorIdx >= 0) {
-        authorRanges.push({
+        ranges.author.push({
           range: new vscode.Range(i, authorIdx, i, authorIdx + commit.author.length),
         });
       }
     }
 
-    const hashDeco = vscode.window.createTextEditorDecorationType({
-      color: "#F5A623",
-      fontWeight: "bold",
-    });
-    const authorDeco = vscode.window.createTextEditorDecorationType({
-      color: "#90A4AE",
-    });
-    const dateDeco = vscode.window.createTextEditorDecorationType({
-      color: "#616161",
-    });
+    return ranges;
+  }
 
-    editor.setDecorations(hashDeco, hashRanges);
-    editor.setDecorations(authorDeco, authorRanges);
-    editor.setDecorations(dateDeco, dateRanges);
-    this.decorationTypes.push(hashDeco, authorDeco, dateDeco);
+  /**
+   * Split each of a line's badges into its sigil box and its name pill.
+   *
+   * Badges are found by searching for the exact text the document provider
+   * emitted, left to right, so repeated ref names can't collide.
+   */
+  private collectBadgeRanges(
+    ranges: TextRanges,
+    text: string,
+    line: number,
+    commit: Commit,
+    laneColor: string
+  ): void {
+    let searchFrom = BADGE_SEARCH_START;
 
-    // Type sigil: white box, bold black letter, rounded on the left only so it
-    // reads as one two-tone pill with the name that follows.
-    const sigilDeco = vscode.window.createTextEditorDecorationType({
-      color: "#000000",
-      fontWeight: "bold",
-      textDecoration:
-        "none; background: #ffffff; border-radius: 3px 0 0 3px; display: inline-block; line-height: 1.3; padding: 0px 1px",
-    });
-    editor.setDecorations(sigilDeco, sigilRanges);
-    this.decorationTypes.push(sigilDeco);
+    for (const ref of commit.refs) {
+      const token = refBadgeText(ref);
+      const start = text.indexOf(token, searchFrom);
+      if (start < 0) continue;
+      const end = start + token.length;
+      const sigilEnd = start + REF_SIGIL_WIDTH;
 
-    // Create one decoration type per unique commit color.
-    // Use CSS injection to shrink the badge height (padding) and add
-    // a visible gap between badge and adjacent rows (margin).
-    for (const [bgColor, ranges] of refByColor) {
-      const textColor = GraphDecorationEngine.isLight(bgColor) ? "#1e1e1e" : "#ffffff";
-      // Inject background via CSS instead of VS Code's backgroundColor
-      // (which always fills the full line height). CSS background respects
-      // the element's inline-block dimensions, giving us control over height.
-      const deco = vscode.window.createTextEditorDecorationType({
-        color: textColor,
-        fontWeight: "bold",
-        textDecoration: `none; background: ${bgColor}; border-radius: 0 3px 3px 0; display: inline-block; line-height: 1.3; padding: 0px 3px 0px 6px; margin-right: 6px`,
+      ranges.sigil.push({ range: new vscode.Range(line, start, line, sigilEnd) });
+
+      const names = ranges.nameByLaneColor.get(laneColor) ?? [];
+      names.push({ range: new vscode.Range(line, sigilEnd, line, end) });
+      ranges.nameByLaneColor.set(laneColor, names);
+
+      // Hit range spans the whole badge, so clicking the sigil works too
+      this.refHits.push({
+        ref,
+        commitHash: commit.hash,
+        range: new vscode.Range(line, start, line, end),
       });
-      editor.setDecorations(deco, ranges);
-      this.decorationTypes.push(deco);
+      searchFrom = end;
     }
+  }
+
+  /** Create the decoration types and hand them their ranges. */
+  private paintRanges(editor: vscode.TextEditor, ranges: TextRanges): void {
+    this.paint(editor, ranges.hash, { color: COLOR.commitHash, fontWeight: "bold" });
+    this.paint(editor, ranges.author, { color: COLOR.author });
+    this.paint(editor, ranges.date, { color: COLOR.date });
+
+    // The type sigil: white box, bold black letter, rounded on the left only
+    // so it reads as one two-tone pill with the name that follows.
+    this.paint(editor, ranges.sigil, {
+      color: COLOR.sigilText,
+      fontWeight: "bold",
+      textDecoration: injectCss({
+        background: COLOR.sigilBackground,
+        "border-radius": "3px 0 0 3px",
+        ...BADGE_BOX,
+        padding: "0px 1px",
+      }),
+    });
+
+    // One decoration type per lane colour, so each badge matches its own dot.
+    for (const [laneColor, names] of ranges.nameByLaneColor) {
+      this.paint(editor, names, {
+        color: GraphDecorationEngine.isLight(laneColor)
+          ? COLOR.badgeTextOnLight
+          : COLOR.badgeTextOnDark,
+        fontWeight: "bold",
+        textDecoration: injectCss({
+          background: laneColor,
+          "border-radius": "0 3px 3px 0",
+          ...BADGE_BOX,
+          // Asymmetric: the badge text carries a trailing space of its own, so
+          // matching padding on both sides would look lopsided.
+          padding: "0px 3px 0px 6px",
+          "margin-right": "6px",
+        }),
+      });
+    }
+  }
+
+  /** Create one decoration type, apply it, and keep it for disposal. */
+  private paint(
+    editor: vscode.TextEditor,
+    ranges: vscode.DecorationOptions[],
+    options: vscode.DecorationRenderOptions
+  ): void {
+    const deco = vscode.window.createTextEditorDecorationType(options);
+    editor.setDecorations(deco, ranges);
+    this.decorationTypes.push(deco);
   }
 
   /** Returns the ref at the given position, or undefined if not on a badge */
@@ -242,14 +310,18 @@ export class GraphDecorationEngine {
     if (!hit) return;
 
     this.hoverDeco = vscode.window.createTextEditorDecorationType({
-      textDecoration: `none; outline: 2px solid #ff3333; border-radius: 3px; outline-offset: 0px`,
+      textDecoration: injectCss({
+        outline: `2px solid ${COLOR.badgeHighlight}`,
+        "border-radius": "3px",
+        "outline-offset": "0px",
+      }),
     });
     editor.setDecorations(this.hoverDeco, [{ range: hit.range }]);
 
     this.hoverTimer = setTimeout(() => {
       this.hoverDeco?.dispose();
       this.hoverDeco = undefined;
-    }, 800);
+    }, TIMING.badgeHighlightMs);
   }
 
   /** Clear any active badge highlight */
@@ -298,15 +370,14 @@ export class GraphDecorationEngine {
 
     for (let i = 0; i < this.selectedRows.length; i++) {
       const line = this.selectedRows[i];
-      const isOnActiveLine = line === this.activeLine;
       const deco = vscode.window.createTextEditorDecorationType({
-        backgroundColor: isOnActiveLine ? "#cc3333" : "#cc3333",
+        backgroundColor: COLOR.selectedRow,
         isWholeLine: true,
-        overviewRulerColor: "#5a9bf6",
+        overviewRulerColor: COLOR.selectedRowMarker,
         overviewRulerLane: vscode.OverviewRulerLane.Center,
         after: {
           contentText: ` [${i + 1}]`,
-          color: "#ffffff",
+          color: COLOR.badgeTextOnDark,
           fontWeight: "bold",
         },
       });
@@ -315,7 +386,7 @@ export class GraphDecorationEngine {
     }
   }
 
-  clearSelections(editor: vscode.TextEditor): void {
+  clearSelections(): void {
     this.selectedRows = [];
     for (const d of this.selectionDecos) d.dispose();
     this.selectionDecos = [];
@@ -347,9 +418,20 @@ export class GraphDecorationEngine {
     // red row highlights and [n] markers are orphaned (VS Code keeps rendering
     // them, the new engine can't clear them) and pile up across refreshes.
     this.clearHighlight();
-    for (const d of this.selectionDecos) d.dispose();
-    this.selectionDecos = [];
-    this.selectedRows = [];
+    this.clearSelections();
     this.svgCache.clear();
   }
+}
+
+/**
+ * The row holding the checked-out branch, or -1 if it isn't in the graph.
+ *
+ * Local branches only: a remote-tracking ref of the same name is a different
+ * commit in general, and highlighting it would be a lie.
+ */
+function findActiveLine(commits: Commit[], currentBranch?: string): number {
+  if (!currentBranch) return -1;
+  return commits.findIndex((c) =>
+    c.refs.some((r) => r.type === "branch" && r.name === currentBranch)
+  );
 }
