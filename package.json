@@ -1,8 +1,8 @@
 {
   "name": "boomergit",
   "displayName": "BoomerGit",
-  "description": "Old man shakes stick at crap git integrations \u2014 native git graph visualization",
-  "version": "0.4.0",
+  "description": "Old man shakes stick at crap git integrations — native git graph visualization",
+  "version": "0.5.0",
   "publisher": "ChristopherThomas",
   "icon": "resources/old_man_yells_at_git_256.png",
   "repository": {
@@ -261,7 +261,7 @@
             "none"
           ],
           "enumDescriptions": [
-            "Tint the whole row green. The most obvious, but it claims the row's background, which the checked-out branch row and a compare selection already use \u2014 on a row that is both, which one shows is up to VS Code.",
+            "Tint the whole row green. The most obvious, but it claims the row's background, which the checked-out branch row and a compare selection already use — on a row that is both, which one shows is up to VS Code.",
             "Draw a green ring around the commit dot. Subtler, but composes with everything: the inverted active row and a compare selection both still show through.",
             "Both the tint and the ring.",
             "Neither. The W badge and the overview-ruler tick still mark the row."
