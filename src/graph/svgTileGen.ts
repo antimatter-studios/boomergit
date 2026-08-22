@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { GraphRow } from "./types.js";
+import { COLOR } from "../ui/theme.js";
 
 // Grid dimensions
 export const COL_WIDTH = 20;
@@ -9,7 +10,8 @@ export const DOT_RADIUS = 5;
 export const LINE_WIDTH = 2.5;
 const SHADOW_WIDTH = 5;
 const SHADOW_OPACITY = 0.75;
-const BG_COLOR = "#1e1e1e";
+/** Lines are haloed in the editor background so crossings read as overlaps. */
+const BG_COLOR = COLOR.editorBackground;
 
 export class SvgTileCache {
   private cacheDir: string;
@@ -48,13 +50,25 @@ export class SvgTileCache {
       const h = seg.half === "top" ? "T" : seg.half === "bottom" ? "B" : "F";
       parts.push(`${h}${seg.topCol}-${seg.botCol}:${seg.color.replace("#", "")}`);
     }
-    let hash = 0;
-    const str = parts.join("_");
-    for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-    }
-    return `tile_${(hash >>> 0).toString(36)}`;
+    return `tile_${fileNameDigest(parts.join("_"))}`;
   }
+}
+
+/**
+ * A short, filename-safe digest of a tile's shape.
+ *
+ * Java's String.hashCode (`h = h * 31 + c`, truncated to 32 bits), picked for
+ * being four lines rather than for collision resistance. A collision would
+ * render the wrong tile, so the 32-bit space matters — but a single graph holds
+ * only as many distinct shapes as it has rows, far below where that bites.
+ */
+function fileNameDigest(text: string): string {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    // (hash << 5) - hash is hash * 31; `| 0` keeps it a signed 32-bit int
+    hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+  }
+  return (hash >>> 0).toString(36);
 }
 
 function colX(col: number): number {
@@ -80,12 +94,14 @@ function segmentPath(x0: number, y0: number, x1: number, y1: number, cpFactor: n
 /**
  * Render a single row tile SVG.
  *
- * Segments are drawn based on their `half` property:
- * - undefined: full height (0 → ROW_HEIGHT)
- * - "top": top half only (0 → midY) — merges arriving at the commit dot
- * - "bottom": bottom half only (midY → ROW_HEIGHT) — forks leaving the commit dot
- *
- * This ensures fork/merge curves connect directly to the commit dot.
+ * Segments are drawn according to their `half` property, which is what makes
+ * curves terminate on the commit dot rather than passing behind it:
+ * - undefined: full height (0 → ROW_HEIGHT) — pass-through lanes, continuing
+ *   commit lanes, and both convergence and merge curves
+ * - "top": top half (0 → midY) — a lane arriving at the dot and ending there,
+ *   i.e. a root commit
+ * - "bottom": bottom half (midY → ROW_HEIGHT) — a lane starting at the dot: a
+ *   new branch tip, and forks departing towards a second parent
  */
 export function renderSvg(row: GraphRow, rowHeight: number = ROW_HEIGHT, maxCols?: number): string {
   const cols = maxCols ?? row.numCols;

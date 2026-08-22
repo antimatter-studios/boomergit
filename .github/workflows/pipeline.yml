@@ -46,8 +46,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Unit tests
-        run: npm test
+      - name: Unit tests + coverage thresholds
+        run: npm run test:coverage
 
   # Release-on-merge: main is protected (PR-only), so releases can't be tag-
   # pushed directly. Instead, when a version bump lands on main (via a release

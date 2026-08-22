@@ -11,9 +11,17 @@
 
 ## Build
 - `npm run build` — esbuild bundle
-- `npm run lint` — typecheck with `tsc --noEmit`
-- `npm test` — run unit tests (Vitest) over the pure functions in `src/git` and `src/graph`
+- `npm run lint` — typecheck `src` **and** `test` (two tsconfigs; tests would otherwise go unchecked)
+- `npm test` — run unit tests (Vitest)
+- `npm run test:coverage` — tests plus coverage thresholds (70% per file, enforced in CI)
+- `npm run visual-check` — render graph scenarios to `build/visual-check.html` for eyeballing; pass a repo path to run against real history
 - `npm run package` — build + create VSIX in `build/`
+
+## Testing
+- `test/mocks/vscode.ts` is a test double for the `vscode` module, aliased in `vitest.config.mts`. The real module only exists inside the extension host, so anything importing it is untestable without this. Value types (`Position`, `Range`, `Uri`, `EventEmitter`) are real implementations because the code depends on their semantics; the host API is spies plus recorded state in `__state`.
+- `test/extension.test.ts` drives `activate()` end to end: it fires the mock's event emitters and invokes registered commands, with `node:child_process` mocked so git responses are scripted per subcommand.
+- Use block bodies in `beforeEach` — a concise arrow returning a value makes Vitest treat that value as a teardown callback.
+- Dev harnesses live in `scripts/dev/` and must import the real modules (bundled via esbuild), never copy them. The previous root-level `test-*.mjs` scripts held pasted copies of the layout algorithm that drifted out of step with `src/`, so they verified code the extension didn't run.
 
 ## Architecture
 - No webviews — fully native VS Code APIs

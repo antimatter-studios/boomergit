@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseRefs } from "../src/git/types.js";
+import { parseRefs, refBadgeText, REF_SIGIL_WIDTH } from "../src/git/types.js";
 import { parseLogOutput } from "../src/git/parser.js";
 
 describe("parseRefs", () => {
@@ -112,5 +112,71 @@ describe("parseLogOutput", () => {
 
   it("skips lines with fewer than 6 fields", () => {
     expect(parseLogOutput("too|few|fields")).toEqual([]);
+  });
+});
+
+describe("parseRefs (--decorate=full)", () => {
+  it("classifies each namespace from its full path", () => {
+    expect(parseRefs("refs/heads/main")).toEqual([{ name: "main", type: "branch" }]);
+    expect(parseRefs("refs/remotes/origin/main")).toEqual([{ name: "origin/main", type: "remote" }]);
+    expect(parseRefs("tag: refs/tags/v1.0")).toEqual([{ name: "v1.0", type: "tag" }]);
+    expect(parseRefs("refs/stash")).toEqual([{ name: "stash", type: "stash" }]);
+    expect(parseRefs("refs/notes/commits")).toEqual([{ name: "commits", type: "note" }]);
+  });
+
+  it("keeps slashed local branches as branches, not remotes", () => {
+    expect(parseRefs("refs/heads/chore/guard")).toEqual([{ name: "chore/guard", type: "branch" }]);
+  });
+
+  it("names PR refs after their number across forges", () => {
+    expect(parseRefs("refs/pull/42/head")).toEqual([{ name: "#42", type: "pr" }]);
+    expect(parseRefs("refs/merge-requests/7/head")).toEqual([{ name: "#7", type: "pr" }]);
+    expect(parseRefs("refs/pull-requests/9/from")).toEqual([{ name: "#9", type: "pr" }]);
+    expect(parseRefs("refs/changes/34/1234/2")).toEqual([{ name: "#1234", type: "pr" }]);
+  });
+
+  it("falls back to 'other' for unknown namespaces", () => {
+    expect(parseRefs("refs/bisect/bad")).toEqual([{ name: "bisect/bad", type: "other" }]);
+    expect(parseRefs("refs/replace/abc123")).toEqual([{ name: "replace/abc123", type: "other" }]);
+  });
+
+  it("splits 'HEAD -> refs/heads/main'", () => {
+    expect(parseRefs("HEAD -> refs/heads/main")).toEqual([
+      { name: "HEAD", type: "head" },
+      { name: "main", type: "branch" },
+    ]);
+  });
+
+  it("keeps only the left side of a non-HEAD symref", () => {
+    expect(parseRefs("origin/HEAD -> origin/main")).toEqual([
+      { name: "origin/HEAD", type: "remote" },
+    ]);
+  });
+});
+
+describe("refBadgeText keeps the full ref name", () => {
+  it("does not shorten even a long name", () => {
+    const name = "origin/dependabot/github_actions/github-actions-bc056f11d8";
+    expect(refBadgeText({ name, type: "remote" })).toBe(` R ${name} `);
+  });
+
+  it("keeps a pathologically long name intact", () => {
+    const name = "origin/" + "long-".repeat(40) + "end";
+    expect(refBadgeText({ name, type: "remote" })).toContain(name);
+  });
+});
+
+describe("refBadgeText", () => {
+  it("prefixes the type sigil in a fixed-width box", () => {
+    expect(refBadgeText({ name: "main", type: "branch" })).toBe(" B main ");
+    expect(refBadgeText({ name: "v1.0", type: "tag" })).toBe(" T v1.0 ");
+    expect(refBadgeText({ name: "origin/main", type: "remote" })).toBe(" R origin/main ");
+    expect(refBadgeText({ name: "HEAD", type: "head" })).toBe(" H HEAD ");
+  });
+
+  it("puts the name immediately after the sigil box", () => {
+    const text = refBadgeText({ name: "main", type: "branch" });
+    expect(text.slice(0, REF_SIGIL_WIDTH)).toBe(" B ");
+    expect(text.slice(REF_SIGIL_WIDTH)).toBe("main ");
   });
 });

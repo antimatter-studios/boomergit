@@ -1,7 +1,15 @@
 import * as vscode from "vscode";
-import { execFile } from "node:child_process";
+import { gitQuery } from "../git/exec.js";
 
 export const FILE_SCHEME = "boomergit-file";
+
+/**
+ * Ref meaning "nothing on this side" — a file that didn't exist yet, one that
+ * has been deleted, or the parent side of a root commit. Defined here because
+ * this is the module that resolves it; anything constructing a diff should
+ * import it rather than repeat the literal.
+ */
+export const EMPTY_REF = "empty";
 
 /** Build a URI with JSON-encoded query for resourceLabelFormatters */
 export function fileUri(filePath: string, ref: string, cwd: string, label: string): vscode.Uri {
@@ -15,20 +23,10 @@ export class GitFileContentProvider implements vscode.TextDocumentContentProvide
     const ref = params.ref ?? "";
     const cwd = params.cwd ?? "";
 
-    // "empty" sentinel → blank content (added files, deleted files, root commits)
-    if (ref === "empty") return Promise.resolve("");
+    if (ref === EMPTY_REF) return Promise.resolve("");
 
     const filePath = uri.path.startsWith("/") ? uri.path.slice(1) : uri.path;
 
-    return new Promise<string>((resolve) => {
-      execFile(
-        "git", ["show", `${ref}:${filePath}`],
-        { cwd, maxBuffer: 10 * 1024 * 1024, encoding: "buffer" },
-        (err, stdout) => {
-          if (err) return resolve("");
-          resolve((stdout as unknown as Buffer).toString("utf8"));
-        }
-      );
-    });
+    return gitQuery(["show", `${ref}:${filePath}`], cwd);
   }
 }
