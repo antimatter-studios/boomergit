@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { execFile } from "node:child_process";
-import type { Commit } from "../git/types.js";
+import { REF_LABEL, REF_SIGIL, type Commit, type RefType } from "../git/types.js";
 
 type FileStatus = "A" | "M" | "D" | "R" | "C" | "T" | "U";
 
@@ -16,7 +16,7 @@ export class CommitInfoProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
   private commit: Commit | undefined;
   private activeRefName: string | undefined;
-  private activeRefType: string | undefined;
+  private activeRefType: RefType | undefined;
   private fullMessage = "";
   private fetchSeq = 0;
 
@@ -85,19 +85,23 @@ export class CommitInfoProvider implements vscode.WebviewViewProvider {
     const msgHtml = this.escapeHtml(this.fullMessage || c.subject);
 
     // Title: "Branch: name" / "Tag: name" etc, or nothing if no refs
-    const typeLabels: Record<string, string> = { branch: "Branch", tag: "Tag", remote: "Remote" };
-    const titleLabel = this.activeRefType ? typeLabels[this.activeRefType] || "" : "";
+    const titleLabel = this.activeRefType ? REF_LABEL[this.activeRefType] || "" : "";
     const titleName = this.activeRefName;
     this.view.title = titleName || "Commit Info";
 
     // Subtitle badges: all other refs (excluding the active one and HEAD)
     const subtitleRefs = c.refs.filter((r) => r.name !== this.activeRefName && r.type !== "head");
-    const badgeColors: Record<string, string> = {
+    const badgeColors: Record<RefType, string> = {
       branch: "#4ec9b0", tag: "#dcdcaa", remote: "#9cdcfe", head: "#c586c0",
+      stash: "#ce9178", note: "#b5cea8", pr: "#569cd6", other: "#888888",
     };
     const badges = subtitleRefs.map((r) => {
       const bg = badgeColors[r.type] || "#888";
-      return `<span style="background:${bg};color:#1e1e1e;padding:1px 6px;border-radius:3px;font-size:0.85em;font-weight:bold;margin-right:4px;">${this.escapeHtml(r.name)}</span>`;
+      // Same two-tone pill as the graph: white sigil box + coloured name
+      return `<span style="font-size:0.85em;font-weight:bold;margin-right:4px;white-space:nowrap;" title="${REF_LABEL[r.type]}">`
+        + `<span style="background:#ffffff;color:#000000;padding:1px 4px;border-radius:3px 0 0 3px;">${REF_SIGIL[r.type]}</span>`
+        + `<span style="background:${bg};color:#1e1e1e;padding:1px 6px;border-radius:0 3px 3px 0;">${this.escapeHtml(r.name)}</span>`
+        + `</span>`;
     }).join("");
 
     this.view.webview.html = `<!DOCTYPE html>

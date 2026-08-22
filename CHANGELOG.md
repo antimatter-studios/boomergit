@@ -11,6 +11,13 @@ Release notes.
 
 ## [Unreleased]
 
+### Added
+- Ref badges now carry a type sigil: a white box with a bold black capital at the head of each badge — **B** branch, **R** remote-tracking, **T** tag, **H** HEAD, **S** stash, **N** notes, **P** pull/merge-request ref, **?** anything else (bisect, replace, filter-branch backups, …). The name half of the badge keeps the commit's lane colour, so a badge now reads as one two-tone pill. Same badges in the Commit Info sidebar.
+- Namespaces git hides by default are now decorated too (`--decorate-refs=refs/*`): notes, stash, PR refs from GitHub/GitLab/Bitbucket/Gerrit, and bisect/replace refs. Previously a notes commit showed up in the graph with no badge at all.
+
+### Fixed
+- Local branches with a `/` in the name (`chore/guard-refresh`) were classified as remote-tracking branches, so their badge menu offered no Delete Branch and the wrong Checkout. Ref classification now reads full ref paths (`--decorate=full`) instead of guessing from the slash.
+
 ## [0.3.2] - 2026-06-22
 
 ### Fixed

@@ -7,7 +7,18 @@ export function parseGitLog(cwd: string): Promise<Commit[]> {
   return new Promise((resolve, reject) => {
     execFile(
       "git",
-      ["log", "--all", `--format=${GIT_LOG_FORMAT}`, "--topo-order"],
+      [
+        "log",
+        "--all",
+        // Full ref paths so refs/heads/foo/bar isn't mistaken for a remote,
+        // and decorate every namespace (git only decorates heads/remotes/
+        // tags/stash/HEAD by default, hiding notes and PR refs entirely).
+        "--decorate=full",
+        "--decorate-refs=refs/*",
+        "--decorate-refs=HEAD",
+        `--format=${GIT_LOG_FORMAT}`,
+        "--topo-order",
+      ],
       { cwd, maxBuffer: 50 * 1024 * 1024 },
       (err, stdout) => {
         if (err) return reject(err);

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { Commit } from "../git/types.js";
+import { refBadgeText, type Commit } from "../git/types.js";
 
 export class GitGraphProvider implements vscode.TextDocumentContentProvider {
   private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
@@ -21,7 +21,7 @@ export class GitGraphProvider implements vscode.TextDocumentContentProvider {
       const shortHash = commit.hash.slice(0, 8);
       const date = new Date(commit.timestamp * 1000);
       const dateStr = date.toISOString().slice(0, 10);
-      const refTokens = commit.refs.map((r) => ` ${r.name} `).join("");
+      const refTokens = commit.refs.map(refBadgeText).join("");
       const refSection = refTokens || "";
 
       // Format: {pad}{hash}{pad}{refs}{gap}{subject}{pad}{author}{pad}{date}

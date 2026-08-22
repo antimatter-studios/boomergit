@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { Commit, Ref } from "../git/types.js";
+import { refBadgeText, REF_SIGIL_WIDTH, type Commit, type Ref } from "../git/types.js";
 import type { GraphRow } from "../graph/types.js";
 import { SvgTileCache, COL_WIDTH } from "../graph/svgTileGen.js";
 
@@ -124,6 +124,8 @@ export class GraphDecorationEngine {
     const dateRanges: vscode.DecorationOptions[] = [];
     // Group ref badge ranges by commit color so each gets matching dot color
     const refByColor = new Map<string, vscode.DecorationOptions[]>();
+    // The " X " type sigil at the head of every badge — white box, same for all
+    const sigilRanges: vscode.DecorationOptions[] = [];
 
     for (let i = 0; i < commits.length && i < rows.length; i++) {
       const line = editor.document.lineAt(i);
@@ -139,17 +141,21 @@ export class GraphDecorationEngine {
         });
       }
 
-      // Find each ref token: " name " appearing after the hash
+      // Find each ref token: " X name " appearing after the hash
       let searchFrom = 10; // past "  {hash}  "
       for (const ref of commit.refs) {
-        const token = ` ${ref.name} `;
+        const token = refBadgeText(ref);
         const idx = text.indexOf(token, searchFrom);
         if (idx >= 0) {
-          const range = new vscode.Range(i, idx, i, idx + token.length);
+          const sigilEnd = idx + REF_SIGIL_WIDTH;
+          sigilRanges.push({ range: new vscode.Range(i, idx, i, sigilEnd) });
+          const nameRange = new vscode.Range(i, sigilEnd, i, idx + token.length);
           if (!refByColor.has(commitColor)) {
             refByColor.set(commitColor, []);
           }
-          refByColor.get(commitColor)!.push({ range });
+          refByColor.get(commitColor)!.push({ range: nameRange });
+          // Hit range spans the whole badge so clicking the sigil works too
+          const range = new vscode.Range(i, idx, i, idx + token.length);
           this.refHits.push({ ref, commitHash: commit.hash, range });
           searchFrom = idx + token.length;
         }
@@ -187,6 +193,17 @@ export class GraphDecorationEngine {
     editor.setDecorations(dateDeco, dateRanges);
     this.decorationTypes.push(hashDeco, authorDeco, dateDeco);
 
+    // Type sigil: white box, bold black letter, rounded on the left only so it
+    // reads as one two-tone pill with the name that follows.
+    const sigilDeco = vscode.window.createTextEditorDecorationType({
+      color: "#000000",
+      fontWeight: "bold",
+      textDecoration:
+        "none; background: #ffffff; border-radius: 3px 0 0 3px; display: inline-block; line-height: 1.3; padding: 0px 1px",
+    });
+    editor.setDecorations(sigilDeco, sigilRanges);
+    this.decorationTypes.push(sigilDeco);
+
     // Create one decoration type per unique commit color.
     // Use CSS injection to shrink the badge height (padding) and add
     // a visible gap between badge and adjacent rows (margin).
@@ -198,7 +215,7 @@ export class GraphDecorationEngine {
       const deco = vscode.window.createTextEditorDecorationType({
         color: textColor,
         fontWeight: "bold",
-        textDecoration: `none; background: ${bgColor}; border-radius: 3px; display: inline-block; line-height: 1.3; padding: 0px 2px; margin-right: 6px`,
+        textDecoration: `none; background: ${bgColor}; border-radius: 0 3px 3px 0; display: inline-block; line-height: 1.3; padding: 0px 3px 0px 6px; margin-right: 6px`,
       });
       editor.setDecorations(deco, ranges);
       this.decorationTypes.push(deco);
