@@ -17,6 +17,11 @@ Release notes.
 
 ### Fixed
 - Local branches with a `/` in the name (`chore/guard-refresh`) were classified as remote-tracking branches, so their badge menu offered no Delete Branch and the wrong Checkout. Ref classification now reads full ref paths (`--decorate=full`) instead of guessing from the slash.
+- Two debug `console.log` calls were left in the release build. One fired on every commit click and dumped 300 characters of git output into the extension host log.
+
+### Changed
+- Internal refactor for readability, with no change to behaviour: `git` invocation centralised into one module (it was hand-wrapped in a Promise in eight places, with an inconsistent output-buffer ceiling), the three repository-mutating commands reduced to one shared implementation, and interaction timings and colours moved into named, documented constants. Click-intent resolution, click-menu construction and diff-side selection are now separate pure modules. See `docs/human-code-report-2026-08-22.md`.
+- Test coverage raised from 18.7% to 98.5% of lines (36 → 269 tests), unblocked by a `vscode` test double that makes the previously untestable extension modules loadable under Vitest. CI now enforces a 70% per-file floor via `npm run test:coverage`.
 
 ## [0.3.2] - 2026-06-22
 

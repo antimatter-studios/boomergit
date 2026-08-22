@@ -12,8 +12,14 @@
 ## Build
 - `npm run build` — esbuild bundle
 - `npm run lint` — typecheck with `tsc --noEmit`
-- `npm test` — run unit tests (Vitest) over the pure functions in `src/git` and `src/graph`
+- `npm test` — run unit tests (Vitest)
+- `npm run test:coverage` — tests plus coverage thresholds (70% per file, enforced in CI)
 - `npm run package` — build + create VSIX in `build/`
+
+## Testing
+- `test/mocks/vscode.ts` is a test double for the `vscode` module, aliased in `vitest.config.mts`. The real module only exists inside the extension host, so anything importing it is untestable without this. Value types (`Position`, `Range`, `Uri`, `EventEmitter`) are real implementations because the code depends on their semantics; the host API is spies plus recorded state in `__state`.
+- `test/extension.test.ts` drives `activate()` end to end: it fires the mock's event emitters and invokes registered commands, with `node:child_process` mocked so git responses are scripted per subcommand.
+- Use block bodies in `beforeEach` — a concise arrow returning a value makes Vitest treat that value as a teardown callback.
 
 ## Architecture
 - No webviews — fully native VS Code APIs
