@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { gitQuery } from "../git/exec.js";
+import { gitRun } from "../git/exec.js";
 
 /** git's name-status letters: added, modified, deleted, renamed, copied, type-changed, unmerged. */
 export type FileStatus = "A" | "M" | "D" | "R" | "C" | "T" | "U";
@@ -11,24 +11,29 @@ export interface ChangedFile {
 }
 
 /**
- * Parse `git diff-tree --name-status` output.
+ * Parse `git diff-tree --name-status -z` output: a flat NUL-separated stream of
+ * a status token, then one path — or two, old then new, for a rename or copy.
  *
- * Each line is a status letter followed by tab-separated paths. Renames and
- * copies carry two paths — old then new — and everything else carries one.
+ * `-z` is not optional. Without it git C-quotes any path containing non-ASCII
+ * or special characters (`café.txt` arrives as `"caf\303\251.txt"`), and that
+ * quoted literal is not a path `git show` can resolve — so the file appears in
+ * the tree under a mangled name and its diff opens blank on both sides.
  */
 export function parseNameStatus(stdout: string): ChangedFile[] {
+  const fields = stdout.split("\0").filter((field) => field !== "");
   const files: ChangedFile[] = [];
-  for (const line of stdout.trim().split("\n")) {
-    if (!line) continue;
-    const parts = line.split("\t");
-    const status = parts[0].charAt(0) as FileStatus;
-    // A rename or copy carries two paths, old then new; everything else one.
-    // Skip a line missing the path it needs rather than building a file entry
-    // with an undefined path, which would throw when the tree is assembled.
+
+  let i = 0;
+  while (i < fields.length) {
+    const status = fields[i++].charAt(0) as FileStatus;
     const isMove = status === "R" || status === "C";
-    const filePath = isMove ? parts[2] : parts[1];
+    const first = fields[i++];
+    const second = isMove ? fields[i++] : undefined;
+    // A truncated final record has no path to show; skip it rather than
+    // building an entry whose undefined path throws when the tree is built.
+    const filePath = isMove ? second : first;
     if (!filePath) continue;
-    files.push(isMove ? { status, path: filePath, oldPath: parts[1] } : { status, path: filePath });
+    files.push(isMove ? { status, path: filePath, oldPath: first } : { status, path: filePath });
   }
   return files;
 }
@@ -151,6 +156,8 @@ export class ChangedFilesProvider implements vscode.TreeDataProvider<vscode.Tree
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private fileTree: FileTreeNode = emptyTree();
+  /** Set when git itself failed, so an error can be told from "no changes". */
+  private failure: string | undefined;
   private fetchSeq = 0;
   private commitHash = "";
   private parentHash = "";
@@ -165,15 +172,17 @@ export class ChangedFilesProvider implements vscode.TreeDataProvider<vscode.Tree
     this.fileTree = emptyTree();
     this._onDidChangeTreeData.fire();
 
-    const files = await this.fetchChangedFiles(hash, isRoot, cwd);
+    const result = await this.fetchChangedFiles(hash, isRoot, cwd);
     if (seq !== this.fetchSeq) return;
 
-    this.fileTree = flattenSingleChildDirs(buildFileTree(files));
+    this.failure = result.ok ? undefined : result.error;
+    this.fileTree = result.ok ? flattenSingleChildDirs(buildFileTree(result.files)) : emptyTree();
     this._onDidChangeTreeData.fire();
   }
 
   clear(): void {
     this.fetchSeq++;
+    this.failure = undefined;
     this.fileTree = emptyTree();
     this._onDidChangeTreeData.fire();
   }
@@ -184,6 +193,7 @@ export class ChangedFilesProvider implements vscode.TreeDataProvider<vscode.Tree
 
   getChildren(element?: vscode.TreeItem): vscode.TreeItem[] {
     try {
+      if (!element && this.failure) return [new TreeErrorItem(this.failure)];
       if (!element) {
         return treeNodeToItems(this.fileTree, this.commitHash, this.parentHash, this.cwd);
       }
@@ -199,11 +209,28 @@ export class ChangedFilesProvider implements vscode.TreeDataProvider<vscode.Tree
     }
   }
 
-  private async fetchChangedFiles(hash: string, isRoot: boolean, cwd: string): Promise<ChangedFile[]> {
-    const args = ["diff-tree", "--no-commit-id", "-r", "--name-status"];
+  /**
+   * Ask git which files the commit touched.
+   *
+   * Uses gitRun rather than gitQuery so a git failure stays distinguishable
+   * from a commit that changed nothing — swallowing it would put the view in
+   * exactly the state the error item exists to prevent.
+   */
+  private async fetchChangedFiles(
+    hash: string,
+    isRoot: boolean,
+    cwd: string
+  ): Promise<{ ok: true; files: ChangedFile[] } | { ok: false; error: string }> {
+    const args = ["diff-tree", "--no-commit-id", "-r", "--name-status", "-z"];
     // A root commit has no parent to diff against, so git needs telling.
     if (isRoot) args.push("--root");
     args.push(hash);
-    return parseNameStatus(await gitQuery(args, cwd));
+    try {
+      return { ok: true, files: parseNameStatus(await gitRun(args, cwd)) };
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      console.error("[boomergit] diff-tree failed:", error);
+      return { ok: false, error };
+    }
   }
 }
