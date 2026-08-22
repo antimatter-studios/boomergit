@@ -493,6 +493,35 @@ document said 275 / 98.8%. Every number here is now taken from an actual run.
 
 ---
 
+## Reported from use
+
+**A long ref name rendered as two badges.** Spotted on a real repository: a
+badge reading `…premature-activatio` followed by a separate pill containing a
+lone `n`, another followed by `r`, another by `056f11d8`, and some containing
+nothing at all.
+
+Measuring the seam in the screenshots settled it — every split fragment was
+exactly 50 characters, and every badge that rendered intact was 46 or fewer.
+That is VS Code's line renderer, which splits any styled run longer than 50
+characters into separate spans. A decoration's CSS is applied to each span
+independently, so `display: inline-block` plus a background, radius, padding
+and margin produces a *second pill* rather than a continuation. The empty ones
+were a fragment holding only the badge's trailing space.
+
+The pill look depends on `inline-block` — without it the background fills the
+full line height and a badge becomes a stripe — so the fix is to keep the run
+inside the limit rather than change the styling. `badgeName()` elides the middle
+of any name over 48 characters, keeping both ends because both identify a
+branch: the remote and namespace prefix, and the distinctive tail (a ticket
+number, a generated hash suffix). `Ref.name` stays full, so checkout, delete and
+copy still act on the real name — with tests pinning that, and pinning the run
+length for every name observed splitting.
+
+Pre-existing: the coloured-pill approach predates the type sigils, so any
+sufficiently long branch name would have done this.
+
+---
+
 ## Still open
 
 Nothing from the original scan and nothing from the review. Two things a later
