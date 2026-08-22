@@ -396,7 +396,16 @@ export const window = {
     __state.warningMessages.push(message);
     return Promise.resolve(__state.nextWarningChoice);
   }),
-  showInputBox: vi.fn(() => Promise.resolve(__state.nextInputBoxValue)),
+  /** Options are typed so tests can assert what the extension prompted with. */
+  showInputBox: vi.fn(
+    (_options?: {
+      title?: string;
+      prompt?: string;
+      value?: string;
+      placeHolder?: string;
+      valueSelection?: [number, number];
+    }) => Promise.resolve(__state.nextInputBoxValue)
+  ),
   setStatusBarMessage: vi.fn((message: string) => {
     __state.statusBarMessages.push(message);
     return new Disposable();

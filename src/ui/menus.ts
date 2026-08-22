@@ -54,31 +54,71 @@ function copyHashEntry(commit: Commit): string {
   );
 }
 
+/** What the caller knows about a ref that changes which actions are possible. */
+export interface BadgeMenuContext {
+  /** The branch checked out in the working tree the editor has open. */
+  currentBranch?: string;
+  /** Another working tree holding this ref's branch, if one does. */
+  heldByWorktree?: string;
+  /**
+   * Why a worktree cannot be created for this ref, if it cannot — git refuses
+   * a branch already checked out anywhere, including here.
+   */
+  worktreeBlockedBy?: string;
+}
+
 /**
  * The menu for clicking a ref badge.
  *
  * Which entries appear depends on what the ref actually supports: see
  * isCheckoutable for what can be checked out, and only a local branch can be
- * deleted — never the one currently checked out.
+ * deleted — never the one currently checked out, and never one another working
+ * tree is holding, since git refuses both outright.
  */
-export function buildBadgeMenu(ref: Ref, commit: Commit, currentBranch?: string): string {
+export function buildBadgeMenu(
+  ref: Ref,
+  commit: Commit,
+  context: BadgeMenuContext = {}
+): string {
+  const { currentBranch, heldByWorktree, worktreeBlockedBy } = context;
   const entries: string[] = [];
 
   if (isCheckoutable(ref)) {
+    // `git checkout` fails outright while another working tree holds the
+    // branch, so say so rather than offering an action that cannot work.
     entries.push(
-      commandLink("$(git-branch)&ensp;Checkout Branch", "boomergit.checkoutRef", [
-        ref.name,
-        ref.type,
-      ])
+      heldByWorktree
+        ? disabled(`$(git-branch)&ensp;Checked out in worktree ${heldByWorktree}`)
+        : commandLink("$(git-branch)&ensp;Checkout Branch", "boomergit.checkoutRef", [
+            ref.name,
+            ref.type,
+          ])
+    );
+
+    // A worktree checks the branch out alongside, instead of moving this one.
+    // git refuses a branch already checked out anywhere — including the tree
+    // you are in — so both cases are named rather than offered and failed.
+    entries.push(
+      worktreeBlockedBy
+        ? disabled(`$(list-tree)&ensp;Already checked out in ${worktreeBlockedBy}`)
+        : commandLink("$(list-tree)&ensp;Create Worktree&hellip;", "boomergit.createWorktree", [
+            ref.name,
+            ref.type,
+          ])
     );
   }
 
   if (ref.type === "branch") {
-    entries.push(
-      ref.name === currentBranch
-        ? disabled("$(trash)&ensp;Cannot delete current branch")
-        : commandLink("$(trash)&ensp;Delete Branch", "boomergit.deleteBranch", [ref.name])
-    );
+    if (ref.name === currentBranch) {
+      entries.push(disabled("$(trash)&ensp;Cannot delete current branch"));
+    } else if (heldByWorktree) {
+      // Same refusal from git: a branch in use by a worktree cannot be deleted.
+      entries.push(disabled(`$(trash)&ensp;In use by worktree ${heldByWorktree}`));
+    } else {
+      entries.push(
+        commandLink("$(trash)&ensp;Delete Branch", "boomergit.deleteBranch", [ref.name])
+      );
+    }
   }
 
   entries.push(

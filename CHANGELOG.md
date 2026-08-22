@@ -11,6 +11,43 @@ Release notes.
 
 ## [Unreleased]
 
+### Added
+- **Worktrees.** A Worktrees panel at the top of the sidebar lists every working
+  tree of the repository — branch or directory name, whether it's detached,
+  locked or prunable, and the commit it sits on. Clicking one jumps the graph to
+  that commit; its context menu opens it in a new window or copies its path.
+- Commits a **linked** worktree has checked out are **tinted green**, ticked in
+  the overview ruler, and carry a `W` badge naming the worktree. The main
+  worktree is never marked — that's the repository itself, already described by
+  its HEAD and branch badges. This doesn't depend on which worktree you're
+  viewing from, so the graph reads the same from anywhere.
+  `boomergit.worktrees.rowStyle` switches the row marker between the tint, a
+  ring around the commit dot, both, or neither.
+- **Create Worktree** on a branch badge, checking the branch out alongside
+  rather than moving the tree you're in. From a remote branch it creates a local
+  branch tracking it. The target path is always shown for confirmation first.
+- Two settings for where worktrees go: `boomergit.worktrees.location`
+  (`sibling`, the default, puts them next to the project as `<repo>-<branch>`;
+  `custom` uses a directory you name) and `boomergit.worktrees.customPath`,
+  which understands `${workspaceFolder}` — so `${workspaceFolder}/.worktrees`
+  gives an in-repository layout. Add `.worktrees/` to `.gitignore` if you use
+  that, or git will report it as untracked.
+
+### Fixed
+- Which working tree you have open is now identified by asking git rather than
+  by comparing paths. git reports resolved paths, so a repository opened at
+  `/tmp/x` appears as `/private/tmp/x` and the comparison failed — mislabelling
+  which worktree the panel called current, and greying out actions on the branch
+  you were actually on. Any symlinked path did this, not just `/tmp`.
+- A commit with a `refs/replace/*` ref was badged as a local branch called
+  `replaced`, and its menu offered to check out and delete a branch that doesn't
+  exist. git decorates such commits with that bare word rather than a ref path;
+  it is now badged `?` like the other uncommon namespaces.
+- Checkout and Delete Branch were offered for branches another working tree has
+  checked out, where git refuses both outright. They are now greyed with the
+  worktree named, as is Create Worktree for a branch already checked out
+  anywhere — including the one you're in.
+
 ## [0.4.0] - 2026-08-22
 
 ### Added

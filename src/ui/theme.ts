@@ -43,6 +43,29 @@ export const COLOR = {
   /** Outline drawn around a ref badge while the pointer is over it. */
   badgeHighlight: "#ff3333",
 
+  /**
+   * Anything marking "another working tree has this checked out": the ring
+   * around the commit dot, its badge, and its tick in the overview ruler. One
+   * token so the three cannot drift apart.
+   */
+  worktreeAccent: "#73c991",
+
+  /**
+   * Whole-row tint for the same thing, when `worktrees.rowStyle` asks for it.
+   * Bright enough to read as green rather than as a shadow, which the first
+   * attempt (#1b3a29) did not.
+   */
+  worktreeRow: "#245c3d",
+
+  /**
+   * The date column on a tinted row.
+   *
+   * `date` is a mid grey, which lands at almost exactly the tint's luminance —
+   * 1.27:1, invisible. This keeps the column as quiet as it is on a normal row
+   * (3.26:1 here against 2.69:1 there) without letting it disappear.
+   */
+  dateOnWorktreeRow: "#8fae9d",
+
   /** A row picked for compare, and its marker in the overview ruler. */
   selectedRow: "#cc3333",
   selectedRowMarker: "#5a9bf6",
@@ -70,4 +93,5 @@ export const REF_BADGE_COLOR: Record<RefType, string> = {
   note: "#b5cea8",
   pr: "#569cd6",
   other: "#888888",
+  worktree: COLOR.worktreeAccent,
 };

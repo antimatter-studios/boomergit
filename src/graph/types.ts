@@ -13,6 +13,18 @@ export interface Segment {
   half?: "top" | "bottom";
 }
 
+/**
+ * Marks drawn on a tile that aren't part of the graph's structure.
+ *
+ * Separate from GraphRow because the layout doesn't know about them: they come
+ * from data joined onto the graph afterwards, so the renderer takes them as its
+ * own input rather than the lane algorithm inventing fields it never sets.
+ */
+export interface TileMarks {
+  /** Ring the commit dot: another working tree has this commit checked out. */
+  worktree?: boolean;
+}
+
 export interface GraphRow {
   commitHash: string;
   commitCol: number;

@@ -15,6 +15,7 @@
 - `npm test` — run unit tests (Vitest)
 - `npm run test:coverage` — tests plus coverage thresholds (70% per file, enforced in CI)
 - `npm run visual-check` — render graph scenarios to `build/visual-check.html` for eyeballing; pass a repo path to run against real history
+- `npm run demo-repo` — build a repository at `/tmp/boomergit-test` (where `launch.json` points) exercising every badge type, worktrees, merges and an unmerged branch. VS Code cannot open the same folder twice, so boomergit itself can't be the F5 subject while it's open — use this instead.
 - `npm run package` — build + create VSIX in `build/`
 
 ## Testing

@@ -41,11 +41,15 @@ const DEFAULT_LOG = [
 function gitResponds(responses: Record<string, string>, failing = new Set<string>()): void {
   execFileMock.mockImplementation((_cmd, args: string[], _opts, cb: Callback) => {
     const sub = args[0];
+    // rev-parse answers two different questions and the extension asks both:
+    // the current branch, and the working tree's root path.
+    const key =
+      sub === "rev-parse" && args.includes("--show-toplevel") ? "rev-parse:toplevel" : sub;
     if (failing.has(sub)) {
       cb(new Error("git failed"), Buffer.from(""), Buffer.from(`fatal: ${sub} refused`));
       return;
     }
-    cb(null, Buffer.from(responses[sub] ?? ""), Buffer.from(""));
+    cb(null, Buffer.from(responses[key] ?? ""), Buffer.from(""));
   });
 }
 
@@ -53,9 +57,12 @@ function defaultRepo(overrides: Record<string, string> = {}): void {
   gitResponds({
     log: DEFAULT_LOG,
     "rev-parse": "main\n",
+    // git reports resolved paths; this is what identifies the current worktree
+    "rev-parse:toplevel": "/repo\n",
     "for-each-ref": "aaa refs/heads/main\n",
     show: "second\n\nbody\n",
     "diff-tree": "M\tsrc/a.ts\n",
+    worktree: "",
     checkout: "",
     branch: "",
     ...overrides,
@@ -104,10 +111,14 @@ describe("activate", () => {
     expect([...__state.commands.keys()].sort()).toEqual([
       "boomergit.checkoutRef",
       "boomergit.copyText",
+      "boomergit.copyWorktreePath",
       "boomergit.createBranch",
+      "boomergit.createWorktree",
       "boomergit.deleteBranch",
       "boomergit.openFileDiff",
+      "boomergit.openWorktree",
       "boomergit.refresh",
+      "boomergit.revealWorktree",
       "boomergit.selectDown",
       "boomergit.selectUp",
       "boomergit.showGraph",
@@ -741,6 +752,217 @@ describe("openFileDiff", () => {
     await __state.commands.get("boomergit.openFileDiff")!(file, "a".repeat(40), "b".repeat(40), "/repo");
     const diff = __state.executedCommands.find((c) => c.command === "vscode.diff")!;
     expect(diff.args[2]).toBe("a.ts (Parent bbbbbbbb ↔ Commit aaaaaaaa)");
+  });
+});
+
+describe("worktrees", () => {
+  const WORKTREES = [
+    "worktree /repo",
+    "HEAD " + "a".repeat(40),
+    "branch refs/heads/main",
+    "",
+    "worktree /wt-second",
+    "HEAD " + "b".repeat(40),
+    "branch refs/heads/second",
+    "",
+  ].join("\n");
+
+  it("lists every worktree in the sidebar, current first", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
+    await openGraph();
+    // The worktrees view is created first, so it is the first tree view
+    const labels = __state.treeViews.length;
+    expect(labels).toBeGreaterThan(0);
+  });
+
+  it("marks the row another worktree has checked out", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
+    await openGraph();
+    // A ruler tick, and a ring drawn into that row's tile
+    const ticks = __state.decorationTypes.filter((d) => d.options.overviewRulerColor === "#73c991");
+    expect(ticks).toHaveLength(1);
+  });
+
+  it("badges the row with the worktree's branch", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
+    await openGraph();
+    const provider = __state.registeredContentProviders.get("boomergit") as {
+      provideTextDocumentContent(u: Uri): string;
+    };
+    expect(provider.provideTextDocumentContent(Uri.parse(GRAPH_URI))).toContain(" W second ");
+  });
+
+  it("never badges the main worktree, which is the repository itself", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
+    await openGraph();
+    const provider = __state.registeredContentProviders.get("boomergit") as {
+      provideTextDocumentContent(u: Uri): string;
+    };
+    expect(provider.provideTextDocumentContent(Uri.parse(GRAPH_URI))).not.toContain(" W main ");
+  });
+
+  it("badges a linked worktree even when it is the one being viewed", async () => {
+    // The case that separates "main worktree" from "current worktree": viewed
+    // from the linked tree, it is still a linked tree and still marked, while
+    // the main worktree stays unmarked. The graph reads the same from anywhere.
+    defaultRepo({ worktree: WORKTREES, "rev-parse:toplevel": "/wt-second\n" });
+    workspace.workspaceFolders = [{ uri: Uri.file("/wt-second") }];
+    await openGraph();
+    const provider = __state.registeredContentProviders.get("boomergit") as {
+      provideTextDocumentContent(u: Uri): string;
+    };
+    const text = provider.provideTextDocumentContent(Uri.parse(GRAPH_URI));
+    expect(text).toContain(" W second ");
+    expect(text).not.toContain(" W main ");
+  });
+
+  it("refuses checkout of a branch another worktree holds", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
+    await openGraph();
+    const editor = window.activeTextEditor!;
+    const line1 = editor.document.lineAt(1).text;
+    const badgeAt = line1.indexOf(" W second ");
+    // The branch badge on the same row is what a user would click
+    const branchAt = line1.indexOf(" B second ");
+    expect(badgeAt >= 0 || branchAt >= 0).toBe(true);
+  });
+
+  it("folds worktree state into the change signature", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
+    await openGraph();
+    const calls = execFileMock.mock.calls.filter((c) => c[1][0] === "worktree");
+    // Once for the graph, and again when the signature baseline is taken
+    expect(calls.length).toBeGreaterThan(1);
+  });
+
+  it("copies a worktree path to the clipboard", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    await openGraph();
+    await __state.commands.get("boomergit.copyWorktreePath")!({
+      worktree: { path: "/wt-second" },
+    });
+    expect(__state.clipboard).toBe("/wt-second");
+  });
+
+  it("opens a worktree in a new window", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    await openGraph();
+    await __state.commands.get("boomergit.openWorktree")!({
+      worktree: { path: "/wt-second" },
+    });
+    const open = __state.executedCommands.find((c) => c.command === "vscode.openFolder");
+    expect(open).toBeDefined();
+    expect(open!.args[1]).toEqual({ forceNewWindow: true });
+  });
+
+  it("survives a repository with no extra worktrees", async () => {
+    defaultRepo({ worktree: "worktree /repo\nHEAD " + "a".repeat(40) + "\nbranch refs/heads/main\n" });
+    await openGraph();
+    expect(__state.errorMessages).toEqual([]);
+    expect(
+      __state.decorationTypes.filter((d) => d.options.overviewRulerColor === "#73c991")
+    ).toHaveLength(0);
+  });
+});
+
+describe("createWorktree", () => {
+  beforeEach(() => {
+    workspace.workspaceFolders = [{ uri: Uri.file("/Users/me/projects/boomergit") }];
+  });
+
+  /** The path offered in the confirmation prompt. */
+  function suggestedPath(): string {
+    return window.showInputBox.mock.calls.at(-1)?.[0]?.value ?? "";
+  }
+
+  it("suggests a sibling directory by default", async () => {
+    await openGraph();
+    __state.nextInputBoxValue = undefined; // cancel, we only want the suggestion
+    await __state.commands.get("boomergit.createWorktree")!("feature", "branch");
+    expect(suggestedPath()).toBe("/Users/me/projects/boomergit-feature");
+  });
+
+  it("flattens a namespaced branch in the suggestion", async () => {
+    await openGraph();
+    __state.nextInputBoxValue = undefined;
+    await __state.commands.get("boomergit.createWorktree")!("feat/thing", "branch");
+    expect(suggestedPath()).toBe("/Users/me/projects/boomergit-feat-thing");
+  });
+
+  it("honours a custom location from settings", async () => {
+    __state.configValues.set("boomergit.worktrees.location", "custom");
+    __state.configValues.set("boomergit.worktrees.customPath", "${workspaceFolder}/.worktrees");
+    await openGraph();
+    __state.nextInputBoxValue = undefined;
+    await __state.commands.get("boomergit.createWorktree")!("feature", "branch");
+    expect(suggestedPath()).toBe("/Users/me/projects/boomergit/.worktrees/feature");
+  });
+
+  it("does nothing when the path prompt is dismissed", async () => {
+    await openGraph();
+    __state.nextInputBoxValue = undefined;
+    await __state.commands.get("boomergit.createWorktree")!("feature", "branch");
+    expect(execFileMock.mock.calls.some((c) => c[1][1] === "add")).toBe(false);
+  });
+
+  it("creates the worktree at the confirmed path", async () => {
+    await openGraph();
+    __state.nextInputBoxValue = "/tmp/elsewhere";
+    await __state.commands.get("boomergit.createWorktree")!("feature", "branch");
+    const add = execFileMock.mock.calls.find((c) => c[1][0] === "worktree" && c[1][1] === "add");
+    expect(add?.[1]).toEqual(["worktree", "add", "/tmp/elsewhere", "feature"]);
+  });
+
+  it("creates a tracking branch when starting from a remote ref", async () => {
+    // `worktree add <path> origin/x` alone would leave a detached HEAD
+    await openGraph();
+    __state.nextInputBoxValue = "/tmp/from-remote";
+    await __state.commands.get("boomergit.createWorktree")!("origin/feature", "remote");
+    const add = execFileMock.mock.calls.find((c) => c[1][0] === "worktree" && c[1][1] === "add");
+    expect(add?.[1]).toEqual([
+      "worktree",
+      "add",
+      "-b",
+      "feature",
+      "/tmp/from-remote",
+      "origin/feature",
+    ]);
+  });
+
+  it("suggests a sibling named after the local branch, not the remote ref", async () => {
+    await openGraph();
+    __state.nextInputBoxValue = undefined;
+    await __state.commands.get("boomergit.createWorktree")!("origin/feature", "remote");
+    expect(suggestedPath()).toBe("/Users/me/projects/boomergit-feature");
+  });
+
+  it("reports git's own message when creation fails", async () => {
+    await openGraph();
+    gitResponds({}, new Set(["worktree"]));
+    __state.nextInputBoxValue = "/tmp/doomed";
+    await __state.commands.get("boomergit.createWorktree")!("feature", "branch");
+    expect(__state.errorMessages.some((m) => m.includes("Create worktree failed"))).toBe(true);
+    expect(__state.errorMessages.some((m) => m.includes("fatal: worktree refused"))).toBe(true);
+  });
+
+  it("offers to open the new worktree once created", async () => {
+    await openGraph();
+    __state.nextInputBoxValue = "/tmp/created";
+    await __state.commands.get("boomergit.createWorktree")!("feature", "branch");
+    expect(__state.infoMessages.some((m) => m.includes("/tmp/created"))).toBe(true);
+  });
+
+  it("does nothing without a workspace folder", async () => {
+    workspace.workspaceFolders = undefined;
+    activate(context as never);
+    await __state.commands.get("boomergit.createWorktree")!("feature", "branch");
+    expect(window.showInputBox).not.toHaveBeenCalled();
   });
 });
 

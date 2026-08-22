@@ -5,7 +5,7 @@ import { computeDiffTarget } from "../src/ui/diffTarget.js";
 import { EMPTY_REF } from "../src/providers/gitFileContentProvider.js";
 import { TIMING } from "../src/ui/timings.js";
 import { COLOR, REF_BADGE_COLOR } from "../src/ui/theme.js";
-import { REF_SIGIL, REF_LABEL, type Commit, type Ref } from "../src/git/types.js";
+import { parseRefs, REF_SIGIL, REF_LABEL, type Commit, type Ref } from "../src/git/types.js";
 import type { ChangedFile } from "../src/providers/changedFilesProvider.js";
 
 function commit(over: Partial<Commit> = {}): Commit {
@@ -65,24 +65,119 @@ describe("buildBadgeMenu", () => {
   );
 
   it("offers delete for a branch that isn't checked out", () => {
-    const md = buildBadgeMenu(branch, commit(), "main");
+    const md = buildBadgeMenu(branch, commit(), { currentBranch: "main" });
     expect(md).toContain("Delete Branch");
     expect(linkArgs(md, "boomergit.deleteBranch")).toEqual(["feature"]);
   });
 
   it("refuses to delete the checked-out branch, and says why", () => {
-    const md = buildBadgeMenu(branch, commit(), "feature");
+    const md = buildBadgeMenu(branch, commit(), { currentBranch: "feature" });
     expect(md).toContain("Cannot delete current branch");
     expect(md).not.toContain("command:boomergit.deleteBranch");
   });
 
   it("greys the refusal rather than hiding it", () => {
-    expect(buildBadgeMenu(branch, commit(), "feature")).toContain(COLOR.menuTextDisabled);
+    expect(buildBadgeMenu(branch, commit(), { currentBranch: "feature" })).toContain(COLOR.menuTextDisabled);
   });
 
   it("offers no delete for a remote-tracking branch", () => {
     const md = buildBadgeMenu({ name: "origin/feature", type: "remote" }, commit());
     expect(md).not.toContain("Delete Branch");
+  });
+
+  it("refuses checkout when another worktree holds the branch", () => {
+    // git checkout fails outright here, so the menu must not offer it
+    const md = buildBadgeMenu(branch, commit(), { currentBranch: "main", heldByWorktree: "wt-feature", worktreeBlockedBy: "wt-feature" });
+    expect(md).toContain("Checked out in worktree wt-feature");
+    expect(md).not.toContain("command:boomergit.checkoutRef");
+  });
+
+  it("refuses delete when another worktree holds the branch", () => {
+    const md = buildBadgeMenu(branch, commit(), { currentBranch: "main", heldByWorktree: "wt-feature", worktreeBlockedBy: "wt-feature" });
+    expect(md).toContain("In use by worktree wt-feature");
+    expect(md).not.toContain("command:boomergit.deleteBranch");
+  });
+
+  it("greys every refusal rather than hiding it", () => {
+    // Checkout, create-worktree and delete are all refused by git here
+    const md = buildBadgeMenu(branch, commit(), {
+      currentBranch: "main",
+      heldByWorktree: "wt-feature",
+      worktreeBlockedBy: "wt-feature",
+    });
+    expect(md.split(COLOR.menuTextDisabled).length - 1).toBe(3);
+  });
+
+  it("offers both actions when no worktree holds the branch", () => {
+    const md = buildBadgeMenu(branch, commit(), { currentBranch: "main" });
+    expect(md).toContain("command:boomergit.checkoutRef");
+    expect(md).toContain("command:boomergit.deleteBranch");
+  });
+
+  it("prefers the current-branch refusal over the worktree one", () => {
+    // Can't happen in practice, but the message must be the accurate one
+    const md = buildBadgeMenu(branch, commit(), { currentBranch: "feature", heldByWorktree: "wt-feature", worktreeBlockedBy: "wt-feature" });
+    expect(md).toContain("Cannot delete current branch");
+  });
+
+  it("offers no branch actions for git's 'replaced' decoration", () => {
+    // The harm the misclassification caused: `replaced` is not a branch, so
+    // checkout and delete would both fail. Parsed from git's own decoration
+    // rather than constructed, so this guards the whole path — a hardcoded
+    // `type: "other"` here would pass even if classification regressed.
+    const [ref] = parseRefs("replaced");
+    const md = buildBadgeMenu(ref, commit(), { currentBranch: "main" });
+    expect(md).not.toContain("Checkout");
+    expect(md).not.toContain("Delete Branch");
+    expect(md).not.toContain("Create Worktree");
+    expect(md).toContain("Copy Ref Name");
+  });
+
+  it("offers no worktree actions on a worktree badge itself", () => {
+    const md = buildBadgeMenu({ name: "wt-feature", type: "worktree" }, commit());
+    expect(md).not.toContain("Checkout");
+    expect(md).not.toContain("Delete Branch");
+    expect(md).toContain("Copy Ref Name");
+  });
+
+  it("offers to create a worktree for a local branch", () => {
+    const md = buildBadgeMenu(branch, commit(), { currentBranch: "main" });
+    expect(md).toContain("Create Worktree");
+    expect(linkArgs(md, "boomergit.createWorktree")).toEqual(["feature", "branch"]);
+  });
+
+  it("offers to create a worktree from a remote branch", () => {
+    const md = buildBadgeMenu({ name: "origin/feature", type: "remote" }, commit());
+    expect(linkArgs(md, "boomergit.createWorktree")).toEqual(["origin/feature", "remote"]);
+  });
+
+  it("refuses a worktree for the branch this tree already has", () => {
+    // git refuses a branch checked out anywhere, the current tree included
+    const md = buildBadgeMenu(branch, commit(), {
+      currentBranch: "feature",
+      worktreeBlockedBy: "this worktree",
+    });
+    expect(md).toContain("Already checked out in this worktree");
+    expect(md).not.toContain("command:boomergit.createWorktree");
+  });
+
+  it("refuses a worktree for a branch another tree holds, naming it", () => {
+    const md = buildBadgeMenu(branch, commit(), {
+      currentBranch: "main",
+      heldByWorktree: "wt-feature",
+      worktreeBlockedBy: "wt-feature",
+    });
+    expect(md).toContain("Already checked out in wt-feature");
+  });
+
+  it("offers no worktree action for a tag", () => {
+    const md = buildBadgeMenu({ name: "v1.0", type: "tag" }, commit());
+    expect(md).not.toContain("Create Worktree");
+  });
+
+  it("offers no worktree action for a remote's symbolic HEAD", () => {
+    const md = buildBadgeMenu({ name: "origin/HEAD", type: "remote" }, commit());
+    expect(md).not.toContain("Create Worktree");
   });
 
   it("always offers to copy the ref name and the commit hash", () => {
@@ -103,7 +198,8 @@ describe("buildBadgeMenu", () => {
   });
 
   it("separates entries with a blank line", () => {
-    expect(buildBadgeMenu(branch, commit(), "main").split("\n\n")).toHaveLength(4);
+    // checkout, create worktree, delete, copy ref, copy hash
+    expect(buildBadgeMenu(branch, commit(), { currentBranch: "main" }).split("\n\n")).toHaveLength(5);
   });
 
   it("acts on the full ref name even when the badge shows a shortened one", () => {
