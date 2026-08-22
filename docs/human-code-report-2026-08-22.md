@@ -2,7 +2,7 @@
 
 **Scope:** full `src/` tree (9 files, 1,115 lines at start)
 **Branch:** `feat/ref-type-badges` (PR #17)
-**Items:** 20 found · 19 fixed · 1 deferred
+**Items:** 23 found · 23 fixed · 0 deferred
 
 | | Before | After |
 |---|---|---|
@@ -289,11 +289,8 @@ top-of-file import.
 
 ## Items skipped
 
-| Item | Reason |
-|---|---|
-| Test-file typechecking | *Deferred* — `tsconfig.json` includes only `src/**/*`, so the 269 tests are never typechecked. Worth fixing, but the fake `vscode` types don't structurally match the real ones (hence the `as never` bridges), so enabling it needs real type-compatibility work rather than a config line. Called out below. |
-
-Nothing else was skipped: all 19 remaining confirmed items were applied.
+None. All 23 items were applied, including the three originally deferred — see
+"Follow-up round" below.
 
 ---
 
@@ -301,13 +298,13 @@ Nothing else was skipped: all 19 remaining confirmed items were applied.
 
 | | Before | After |
 |---|---|---|
-| Tests passing | 36 | 269 |
+| Tests passing | 36 | 275 |
 | Tests failing | 0 | 0 |
-| Statements | 18.7% | 96.0% |
-| Branches | 18.2% | 88.5% |
+| Statements | 18.7% | 96.2% |
+| Branches | 18.2% | 88.4% |
 | Functions | 9.3% | 95.1% |
-| Lines | 18.7% | 98.5% |
-| `tsc --noEmit` | clean | clean |
+| Lines | 18.7% | 98.8% |
+| `tsc --noEmit` | clean (src only) | clean (src **and** tests) |
 
 Per-module, lowest figure is `parser.ts` branches at 80% and `extension.ts`
 branches at 84%. `vitest.config.mts` enforces a 70% floor with
@@ -335,15 +332,85 @@ later.
 
 ---
 
-## Discovered, not addressed
+## Follow-up round
 
-- **Tests aren't typechecked** (see skipped table). The cost is real: my own
-  `clearSelections()` arity mistake compiled fine in Vitest and was only caught
-  because `tsc` checks `src/`.
-- **`test-*.mjs` at the repo root** — `test-layout-debug.mjs`,
-  `test-visual.mjs`, `test-svg-verify.mjs`, `test-output.html` are scratch
-  harnesses outside `test/`, not run by anything. Out of the agreed `src/`
-  scope; they look like deletion candidates but that's your call.
-- **`ChangedFilesProvider.getChildren` swallows errors** into a `console.error`
-  and an empty list. Pre-existing, deliberate-looking, and now covered by
-  tests — but it will hide a real tree-building failure as "no changed files".
+The three items originally left open were then addressed.
+
+### Tests weren't typechecked
+
+**Files:** [tsconfig.test.json](../tsconfig.test.json) (new), [package.json](../package.json)
+
+`tsconfig.json` covers only `src/**/*`, so the test files were never
+typechecked. I'd expected this to be a big job because the fake `vscode` types
+don't structurally match the real ones. It wasn't — the entire gap was 15
+errors in two classes:
+
+- **Top-level `await` in 5 files.** The base config's `Node16` module mode
+  treats them as CommonJS. The test config uses `ESNext`/`Bundler`, which is
+  what Vitest actually does with them anyway.
+- **10 × `Uri` not assignable** — the double was missing `toJSON()`. Fixed on
+  the double rather than by casting at each call site: the whole point of the
+  fake is to be structurally faithful to what it stands in for.
+
+`npm run lint` now runs both projects, so CI enforces it.
+
+**Verified working, not merely passing:** a deliberately planted
+`shortHash("abc", "extra")` was caught as `TS2554: Expected 1 arguments, but
+got 2` — the same class as the `clearSelections()` slip that got through
+earlier. A typecheck reporting zero errors is worth nothing until you have
+watched it fail.
+
+### Three scratch harnesses at the repo root
+
+**Files:** [scripts/dev/visual-check.mjs](../scripts/dev/visual-check.mjs) (new),
+replacing `test-layout-debug.mjs`, `test-visual.mjs`, `test-svg-verify.mjs`
+and the generated `test-output.html`
+
+These were worse than unused. Each held a **pasted copy** of the layout
+algorithm — one is labelled "exact copy from src/graph/layout.ts" — and the
+copies had drifted: `test-svg-verify.mjs` computed
+`midY = rowHeight / 2 + rowHeight * 0.02`, an offset the real renderer no
+longer has. A harness that claims to run "the REAL layout algorithm" while
+running a stale duplicate is worse than no harness.
+
+The capability worth keeping was the visual check, so one script now does it by
+importing the real modules, bundled on the fly with esbuild (already a
+dependency):
+
+```
+npm run visual-check                          # 7 synthetic scenarios
+node scripts/dev/visual-check.mjs <repo> [n]  # against a real repository
+```
+
+It writes `build/visual-check.html` (gitignored) and, in repo mode, prints the
+lane table the old debug harness printed. Nothing is duplicated, so it cannot
+drift out of step again.
+
+### `getChildren` swallowed errors into an empty list
+
+**Files:** [src/providers/changedFilesProvider.ts](../src/providers/changedFilesProvider.ts)
+
+A `catch` returned `[]`, which a user cannot tell apart from a commit that
+genuinely changed nothing. It now returns a `TreeErrorItem` — "Failed to list
+changed files", error icon, message in the tooltip — and still logs.
+
+Reading that code turned up a real crash path beside it: `parseNameStatus` on a
+line with no tab produced `{ path: undefined }`, and `buildFileTree` then threw
+on `file.path.split("/")` — out of `showCommit` as an unhandled rejection, not
+into that `catch` at all. Malformed lines are now skipped and the good lines
+around them kept.
+
+---
+
+## Still open
+
+Nothing from the original scan. Two things a later pass might weigh, neither a
+defect and both outside the agreed scope:
+
+- `src/extension.ts` is 640 lines. `activate()` no longer holds the decisions,
+  but it still holds all the wiring. Splitting the registration itself needs
+  the event plumbing under test first, and the payoff is smaller than the line
+  count suggests — registration reads fine linearly.
+- The auto-refresh polling fallback (3 s) runs only when the built-in Git
+  extension is unavailable, which may be rare enough that the fallback costs
+  more to keep than it earns.

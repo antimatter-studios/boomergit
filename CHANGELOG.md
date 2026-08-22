@@ -18,6 +18,8 @@ Release notes.
 ### Fixed
 - Local branches with a `/` in the name (`chore/guard-refresh`) were classified as remote-tracking branches, so their badge menu offered no Delete Branch and the wrong Checkout. Ref classification now reads full ref paths (`--decorate=full`) instead of guessing from the slash.
 - Two debug `console.log` calls were left in the release build. One fired on every commit click and dumped 300 characters of git output into the extension host log.
+- A failure while building the Changed Files tree showed as an empty list, indistinguishable from a commit that changed nothing. It now shows a "Failed to list changed files" entry with the error in its tooltip.
+- Malformed `git diff-tree` output (a status line with no path) threw while assembling the Changed Files tree, leaving the view stuck on the previous commit. Such lines are now skipped and the rest of the diff is still shown.
 
 ### Changed
 - Internal refactor for readability, with no change to behaviour: `git` invocation centralised into one module (it was hand-wrapped in a Promise in eight places, with an inconsistent output-buffer ceiling), the three repository-mutating commands reduced to one shared implementation, and interaction timings and colours moved into named, documented constants. Click-intent resolution, click-menu construction and diff-side selection are now separate pure modules. See `docs/human-code-report-2026-08-22.md`.
