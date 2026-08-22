@@ -19,6 +19,36 @@ export interface RefHit {
  */
 const BADGE_SEARCH_START = 2 + SHORT_HASH_LEN + 2;
 
+/**
+ * The longest styled run VS Code renders as a single span.
+ *
+ * Anything longer is split across several spans, and a decoration's CSS is
+ * applied to each one independently — so a name pill carrying rounded corners,
+ * padding and a right margin renders those *per fragment*, and one long badge
+ * comes out looking like two: `…premature-activatio` followed by a lone `n`.
+ */
+const VSCODE_LONG_RUN_LIMIT = 50;
+
+/**
+ * The pieces a badge's name pill is painted in.
+ *
+ * A name short enough to render as one span is painted `whole`, exactly as it
+ * always was. A longer one is split so that nothing which would repeat sits on
+ * the part that can split: the caps carry the padding, the rounded end and the
+ * margin, and the body carries only a background — so however many spans the
+ * body becomes, they read as one continuous pill.
+ */
+interface NamePillRanges {
+  whole: vscode.DecorationOptions[];
+  leftCap: vscode.DecorationOptions[];
+  body: vscode.DecorationOptions[];
+  tail: vscode.DecorationOptions[];
+}
+
+function emptyNamePill(): NamePillRanges {
+  return { whole: [], leftCap: [], body: [], tail: [] };
+}
+
 /** Ranges to paint, grouped by what they are. */
 interface TextRanges {
   hash: vscode.DecorationOptions[];
@@ -27,7 +57,7 @@ interface TextRanges {
   /** The " X " type box at the head of every badge — same style for all. */
   sigil: vscode.DecorationOptions[];
   /** Badge name pills, grouped by the lane colour they take. */
-  nameByLaneColor: Map<string, vscode.DecorationOptions[]>;
+  nameByLaneColor: Map<string, NamePillRanges>;
 }
 
 /**
@@ -226,9 +256,19 @@ export class GraphDecorationEngine {
 
       ranges.sigil.push({ range: new vscode.Range(line, start, line, sigilEnd) });
 
-      const names = ranges.nameByLaneColor.get(laneColor) ?? [];
-      names.push({ range: new vscode.Range(line, sigilEnd, line, end) });
-      ranges.nameByLaneColor.set(laneColor, names);
+      const pill = ranges.nameByLaneColor.get(laneColor) ?? emptyNamePill();
+      // The name run is the name plus the token's trailing space.
+      const nameRunLength = end - sigilEnd;
+      if (nameRunLength <= VSCODE_LONG_RUN_LIMIT) {
+        pill.whole.push({ range: new vscode.Range(line, sigilEnd, line, end) });
+      } else {
+        // One character at each end, so neither cap can ever be split, and
+        // everything that would visibly repeat lives on them.
+        pill.leftCap.push({ range: new vscode.Range(line, sigilEnd, line, sigilEnd + 1) });
+        pill.body.push({ range: new vscode.Range(line, sigilEnd + 1, line, end - 2) });
+        pill.tail.push({ range: new vscode.Range(line, end - 2, line, end) });
+      }
+      ranges.nameByLaneColor.set(laneColor, pill);
 
       // Hit range spans the whole badge, so clicking the sigil works too
       this.refHits.push({
@@ -259,20 +299,52 @@ export class GraphDecorationEngine {
       }),
     });
 
-    // One decoration type per lane colour, so each badge matches its own dot.
-    for (const [laneColor, names] of ranges.nameByLaneColor) {
-      this.paint(editor, names, {
+    // One set of decoration types per lane colour, so each badge matches its
+    // own dot. Every piece shares the same box model and zero vertical
+    // padding, so the pieces of one pill line up exactly.
+    for (const [laneColor, pill] of ranges.nameByLaneColor) {
+      const text = {
         color: GraphDecorationEngine.isLight(laneColor)
           ? COLOR.badgeTextOnLight
           : COLOR.badgeTextOnDark,
-        fontWeight: "bold",
+        fontWeight: "bold" as const,
+      };
+      const pillBase = { background: laneColor, ...BADGE_BOX };
+
+      // Short name: one span, so one range carries the whole pill. Asymmetric
+      // padding because the text already ends with a space of its own.
+      this.paint(editor, pill.whole, {
+        ...text,
         textDecoration: injectCss({
-          background: laneColor,
+          ...pillBase,
           "border-radius": "0 3px 3px 0",
-          ...BADGE_BOX,
-          // Asymmetric: the badge text carries a trailing space of its own, so
-          // matching padding on both sides would look lopsided.
           padding: "0px 3px 0px 6px",
+          "margin-right": "6px",
+        }),
+      });
+
+      // Long name, first character: owns the left inset.
+      this.paint(editor, pill.leftCap, {
+        ...text,
+        textDecoration: injectCss({ ...pillBase, padding: "0px 0px 0px 6px" }),
+      });
+
+      // Long name, middle: background only. This is the part VS Code may split
+      // into several spans, so it must carry nothing that would repeat — no
+      // radius, no padding, no margin — leaving the fragments seamless.
+      this.paint(editor, pill.body, {
+        ...text,
+        textDecoration: injectCss({ ...pillBase, padding: "0px" }),
+      });
+
+      // Long name, last character plus the trailing space: owns the rounded
+      // end and the gap to the next badge.
+      this.paint(editor, pill.tail, {
+        ...text,
+        textDecoration: injectCss({
+          ...pillBase,
+          "border-radius": "0 3px 3px 0",
+          padding: "0px 3px 0px 0px",
           "margin-right": "6px",
         }),
       });

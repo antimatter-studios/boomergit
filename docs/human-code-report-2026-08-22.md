@@ -509,13 +509,33 @@ and margin produces a *second pill* rather than a continuation. The empty ones
 were a fragment holding only the badge's trailing space.
 
 The pill look depends on `inline-block` — without it the background fills the
-full line height and a badge becomes a stripe — so the fix is to keep the run
-inside the limit rather than change the styling. `badgeName()` elides the middle
-of any name over 48 characters, keeping both ends because both identify a
-branch: the remote and namespace prefix, and the distinctive tail (a ticket
-number, a generated hash suffix). `Ref.name` stays full, so checkout, delete and
-copy still act on the real name — with tests pinning that, and pinning the run
-length for every name observed splitting.
+full line height and a badge becomes a stripe — so the styling stays. The first
+attempt capped the displayed name at 48 characters, which guaranteed a single
+span by arithmetic but hid the middle of long names.
+
+Shortening the name was the wrong trade: nothing needs to be lost. The split
+itself was never the problem — what showed was the styling *repeating* on each
+fragment: the rounded end, the padding and the 6px right margin, which together
+read as a second badge. So the pill is now assembled from pieces chosen by what
+can split:
+
+| piece | width | carries |
+|---|---|---|
+| left cap | 1 char | the left inset |
+| body | the rest | background only — may split, seamlessly |
+| tail | 2 chars | rounded right end, right padding, margin |
+
+Because the caps are a single character they can never be split, so a pill
+always has exactly one left inset and one rounded end however long the name.
+Every piece shares the same box model and zero vertical padding so they line up.
+A name short enough to render as one span takes the original single-range
+styling untouched, which keeps the common case at zero risk.
+
+The remaining exposure is that this is an empirical guarantee rather than an
+arithmetic one: it assumes adjacent fragments render flush. Tests pin that the
+pieces tile the name contiguously, that only one piece carries a radius or a
+margin, and that every piece shares one box model — but no test can assert the
+absence of a hairline seam, so that part was confirmed by eye.
 
 Pre-existing: the coloured-pill approach predates the type sigils, so any
 sufficiently long branch name would have done this.

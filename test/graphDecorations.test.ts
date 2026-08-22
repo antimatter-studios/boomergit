@@ -243,17 +243,96 @@ describe("ref badge decorations", () => {
     expect(hit?.ref.name).toBe(longName);
   });
 
-  it("renders a shortened badge as a single name pill, not two", () => {
-    const longName = "origin/fix/cost-allocation-tag-premature-activation";
+  it("paints a short name as one whole pill", () => {
+    const commits = [commit("a".repeat(40), { refs: [{ name: "main", type: "branch" }] })];
+    const { engine, editor, rows } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+
+    // Exactly one piece carries ranges: the whole-pill styling, unchanged
+    const laneColour = rows[0].commitColor;
+    const withRanges = decorationsWithCss(`background: ${laneColour}`).filter(
+      (d) => (editor.__decorations.get(d) ?? []).length > 0
+    );
+    expect(withRanges).toHaveLength(1);
+    const css = String(withRanges[0].options.textDecoration);
+    expect(css).toContain("border-radius: 0 3px 3px 0");
+    expect(css).toContain("padding: 0px 3px 0px 6px");
+  });
+
+  it("splits a long name's pill so a rendered split can't show", () => {
+    // Over VS Code's 50-character run limit, so its middle may be split into
+    // several spans. Nothing that would repeat may sit on that middle.
+    const longName = "origin/dependabot/github_actions/github-actions-bc056f11d8";
+    const commits = [commit("a".repeat(40), { refs: [{ name: longName, type: "remote" }] })];
+    const { engine, editor, rows, text } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+
+    const laneColour = rows[0].commitColor;
+    const pieces = decorationsWithCss(`background: ${laneColour}`).filter(
+      (d) => (editor.__decorations.get(d) ?? []).length > 0
+    );
+    // Three pieces: left cap, body, tail
+    expect(pieces).toHaveLength(3);
+
+    // The body is the piece carrying nothing that could repeat
+    const seamless = pieces.filter((d) => {
+      const css = String(d.options.textDecoration);
+      return !css.includes("border-radius") && !css.includes("margin-right");
+    });
+    expect(seamless.length).toBeGreaterThan(0);
+    for (const piece of seamless) {
+      expect(String(piece.options.textDecoration)).toContain(`background: ${laneColour}`);
+    }
+
+    // Exactly one piece owns the rounded end and the gap to the next badge
+    const rounded = pieces.filter((d) =>
+      String(d.options.textDecoration).includes("border-radius")
+    );
+    expect(rounded).toHaveLength(1);
+    expect(String(rounded[0].options.textDecoration)).toContain("margin-right: 6px");
+  });
+
+  it("tiles a long name's pieces over the name with no gap or overlap", () => {
+    const longName = "origin/dependabot/github_actions/github-actions-bc056f11d8";
+    const commits = [commit("a".repeat(40), { refs: [{ name: longName, type: "remote" }] })];
+    const { engine, editor, rows, text } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+
+    const laneColour = rows[0].commitColor;
+    const spans = decorationsWithCss(`background: ${laneColour}`)
+      .flatMap((d) => editor.__decorations.get(d) ?? [])
+      .map((o: { range: Range }) => o.range)
+      .sort((a, b) => a.start.character - b.start.character);
+
+    // Contiguous: each piece starts where the previous ended
+    for (let i = 1; i < spans.length; i++) {
+      expect(spans[i].start.character).toBe(spans[i - 1].end.character);
+    }
+    // Together they cover the name plus its trailing space, exactly
+    const badgeStart = text.indexOf(" R ");
+    expect(spans[0].start.character).toBe(badgeStart + 3);
+    expect(spans[spans.length - 1].end.character).toBe(
+      badgeStart + 3 + longName.length + 1
+    );
+  });
+
+  it("gives every piece of one pill the same box, so they line up", () => {
+    const longName = "origin/dependabot/github_actions/github-actions-bc056f11d8";
     const commits = [commit("a".repeat(40), { refs: [{ name: longName, type: "remote" }] })];
     const { engine, editor, rows } = setup(commits);
     engine.apply(editor as never, rows, commits);
 
     const laneColour = rows[0].commitColor;
-    const pills = decorationsWithCss(`background: ${laneColour}`);
-    // One decoration type, covering exactly one range
-    expect(pills).toHaveLength(1);
-    expect(editor.__decorations.get(pills[0])).toHaveLength(1);
+    const pieces = decorationsWithCss(`background: ${laneColour}`).filter(
+      (d) => (editor.__decorations.get(d) ?? []).length > 0
+    );
+    for (const piece of pieces) {
+      const css = String(piece.options.textDecoration);
+      expect(css).toContain("display: inline-block");
+      expect(css).toContain("line-height: 1.3");
+      // Zero vertical padding everywhere, or the pieces would step
+      expect(css).toMatch(/padding: 0px/);
+    }
   });
 
   it("forgets hit ranges once decorations are cleared", () => {
