@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { refBadgeText, REF_SIGIL_WIDTH, type Commit, type Ref } from "../git/types.js";
 import { SHORT_HASH_LEN } from "../git/format.js";
-import type { GraphRow } from "../graph/types.js";
+import type { GraphRow, TileMarks } from "../graph/types.js";
 import { SvgTileCache, COL_WIDTH } from "../graph/svgTileGen.js";
 import { COLOR, REF_BADGE_COLOR } from "../ui/theme.js";
 import { TIMING } from "../ui/timings.js";
@@ -98,17 +98,15 @@ export class GraphDecorationEngine {
   }
 
   /**
-   * Paint rows checked out in another working tree.
+   * Tick the overview ruler for rows another working tree has checked out, so
+   * they can be found when scrolled off screen.
    *
-   * A whole-line tint rather than a badge alone, because "this commit is
-   * checked out somewhere else" is a property of the row, and the thing you
-   * want to spot while scanning is which rows are live elsewhere.
-   *
-   * The current worktree is deliberately excluded: its row already carries the
-   * inverted active-branch treatment, which is a stronger signal, and tinting
-   * it green would replace that with a weaker one.
+   * The row itself is marked by a ring around its commit dot, drawn into the
+   * SVG tile — see TileMarks. A whole-row fill would have been bolder but
+   * cannot compose: the inverted active row and the compare selection both
+   * fill the row already, and a third fill just fights them.
    */
-  private paintWorktreeRows(editor: vscode.TextEditor, commits: Commit[]): void {
+  private markWorktreeRows(editor: vscode.TextEditor, commits: Commit[]): void {
     const rows = commits
       .map((commit, line) =>
         commit.refs.some((ref) => ref.type === "worktree")
@@ -119,7 +117,6 @@ export class GraphDecorationEngine {
     if (rows.length === 0) return;
 
     this.paint(editor, rows, {
-      backgroundColor: COLOR.worktreeRow,
       isWholeLine: true,
       overviewRulerColor: REF_BADGE_COLOR.worktree,
       overviewRulerLane: vscode.OverviewRulerLane.Left,
@@ -139,7 +136,10 @@ export class GraphDecorationEngine {
     this.activeLine = findActiveLine(commits, currentBranch);
 
     for (let i = 0; i < rows.length && i < commits.length; i++) {
-      const svgPath = this.svgCache.getTilePath(rows[i], lineHeight, globalMaxCols);
+      const marks: TileMarks = {
+        worktree: commits[i].refs.some((ref) => ref.type === "worktree"),
+      };
+      const svgPath = this.svgCache.getTilePath(rows[i], lineHeight, globalMaxCols, marks);
       const isActive = i === this.activeLine;
 
       const decorationType = vscode.window.createTextEditorDecorationType({
@@ -160,9 +160,7 @@ export class GraphDecorationEngine {
       this.decorationTypes.push(decorationType);
     }
 
-    // Before the text colours so the tint sits under the badges, and after the
-    // tiles so the active row's inverted styling still wins on its own row.
-    this.paintWorktreeRows(editor, commits);
+    this.markWorktreeRows(editor, commits);
     this.applyTextColors(editor, commits, rows);
   }
 

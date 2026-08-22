@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { GraphRow } from "./types.js";
+import type { GraphRow, TileMarks } from "./types.js";
 import { COLOR } from "../ui/theme.js";
 
 // Grid dimensions
@@ -10,6 +10,9 @@ export const DOT_RADIUS = 5;
 export const LINE_WIDTH = 2.5;
 const SHADOW_WIDTH = 5;
 const SHADOW_OPACITY = 0.75;
+/** Gap between the commit dot and the worktree ring around it. */
+const RING_GAP = 2.5;
+const RING_WIDTH = 1.5;
 /** Lines are haloed in the editor background so crossings read as overlaps. */
 const BG_COLOR = COLOR.editorBackground;
 
@@ -22,13 +25,18 @@ export class SvgTileCache {
     fs.mkdirSync(this.cacheDir, { recursive: true });
   }
 
-  getTilePath(row: GraphRow, rowHeight: number = ROW_HEIGHT, maxCols?: number): string {
+  getTilePath(
+    row: GraphRow,
+    rowHeight: number = ROW_HEIGHT,
+    maxCols?: number,
+    marks: TileMarks = {}
+  ): string {
     const cols = maxCols ?? row.numCols;
-    const key = this.buildKey(row, rowHeight, cols);
+    const key = this.buildKey(row, rowHeight, cols, marks);
     const cached = this.cache.get(key);
     if (cached) return cached;
 
-    const svg = renderSvg(row, rowHeight, cols);
+    const svg = renderSvg(row, rowHeight, cols, marks);
     const filePath = path.join(this.cacheDir, `${key}.svg`);
     fs.writeFileSync(filePath, svg, "utf-8");
     this.cache.set(key, filePath);
@@ -44,8 +52,18 @@ export class SvgTileCache {
     }
   }
 
-  private buildKey(row: GraphRow, rowHeight: number, maxCols: number): string {
-    const parts: string[] = [`c${row.commitCol}:${row.commitColor.replace("#", "")}:h${rowHeight}:w${maxCols}`];
+  private buildKey(
+    row: GraphRow,
+    rowHeight: number,
+    maxCols: number,
+    marks: TileMarks
+  ): string {
+    // Marks belong in the key: two rows identical in structure but differing in
+    // whether they're checked out elsewhere must not share a cached tile.
+    const parts: string[] = [
+      `c${row.commitCol}:${row.commitColor.replace("#", "")}:h${rowHeight}:w${maxCols}`,
+      marks.worktree ? "wt" : "-",
+    ];
     for (const seg of row.segments) {
       const h = seg.half === "top" ? "T" : seg.half === "bottom" ? "B" : "F";
       parts.push(`${h}${seg.topCol}-${seg.botCol}:${seg.color.replace("#", "")}`);
@@ -103,7 +121,12 @@ function segmentPath(x0: number, y0: number, x1: number, y1: number, cpFactor: n
  * - "bottom": bottom half (midY → ROW_HEIGHT) — a lane starting at the dot: a
  *   new branch tip, and forks departing towards a second parent
  */
-export function renderSvg(row: GraphRow, rowHeight: number = ROW_HEIGHT, maxCols?: number): string {
+export function renderSvg(
+  row: GraphRow,
+  rowHeight: number = ROW_HEIGHT,
+  maxCols?: number,
+  marks: TileMarks = {}
+): string {
   const cols = maxCols ?? row.numCols;
   const width = cols * COL_WIDTH + COL_WIDTH;
   const midY = rowHeight / 2;
@@ -143,11 +166,32 @@ export function renderSvg(row: GraphRow, rowHeight: number = ROW_HEIGHT, maxCols
   const cx = colX(row.commitCol);
   const dot = `<circle cx="${cx}" cy="${midY}" r="${DOT_RADIUS}" fill="${row.commitColor}" stroke="${BG_COLOR}" stroke-width="1.5" stroke-opacity="${SHADOW_OPACITY}"/>`;
 
+  // A ring outside the dot says another working tree has this commit checked
+  // out. Drawn here rather than as a row decoration so it composes with the
+  // inverted active row and the compare selection, which both fill the row.
+  // Haloed like the lines are, so it stays legible where a lane passes behind.
+  const ring: string[] = [];
+  if (marks.worktree) {
+    // Clamp to the row: line height follows the user's font size, and a ring
+    // sized for a comfortable row would be clipped by a tight one. If it can't
+    // clear the dot it is dropped rather than drawn as a smudge around it.
+    const largestThatFits = midY - RING_WIDTH / 2 - 0.5;
+    const r = Math.min(DOT_RADIUS + RING_GAP, largestThatFits);
+    if (r < DOT_RADIUS + 1) return svgDocument(width, rowHeight, [...shadows, ...lines, dot]);
+    ring.push(
+      `<circle cx="${cx}" cy="${midY}" r="${r}" fill="none" stroke="${BG_COLOR}" stroke-width="${RING_WIDTH + 2}" stroke-opacity="${SHADOW_OPACITY}"/>`,
+      `<circle cx="${cx}" cy="${midY}" r="${r}" fill="none" stroke="${COLOR.worktreeAccent}" stroke-width="${RING_WIDTH}"/>`
+    );
+  }
+
+  return svgDocument(width, rowHeight, [...shadows, ...lines, dot, ...ring]);
+}
+
+/** Wrap drawn elements in the tile's SVG root. */
+function svgDocument(width: number, height: number, elements: string[]): string {
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${rowHeight}" viewBox="0 0 ${width} ${rowHeight}">`,
-    ...shadows,
-    ...lines,
-    dot,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    ...elements,
     `</svg>`,
   ].join("\n");
 }

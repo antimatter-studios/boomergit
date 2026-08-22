@@ -769,14 +769,13 @@ describe("worktrees", () => {
     expect(labels).toBeGreaterThan(0);
   });
 
-  it("tints the row another worktree has checked out", async () => {
+  it("marks the row another worktree has checked out", async () => {
     defaultRepo({ worktree: WORKTREES });
     workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
     await openGraph();
-    const tinted = __state.decorationTypes.filter(
-      (d) => d.options.backgroundColor === "#1b3a29"
-    );
-    expect(tinted).toHaveLength(1);
+    // A ruler tick, and a ring drawn into that row's tile
+    const ticks = __state.decorationTypes.filter((d) => d.options.overviewRulerColor === "#73c991");
+    expect(ticks).toHaveLength(1);
   });
 
   it("badges the row with the worktree's branch", async () => {
@@ -847,7 +846,7 @@ describe("worktrees", () => {
     await openGraph();
     expect(__state.errorMessages).toEqual([]);
     expect(
-      __state.decorationTypes.filter((d) => d.options.backgroundColor === "#1b3a29")
+      __state.decorationTypes.filter((d) => d.options.overviewRulerColor === "#73c991")
     ).toHaveLength(0);
   });
 });

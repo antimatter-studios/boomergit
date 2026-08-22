@@ -57,3 +57,58 @@ describe("renderSvg", () => {
     expect(svg).toContain(`width="${5 * COL_WIDTH + COL_WIDTH}"`);
   });
 });
+
+describe("renderSvg worktree ring", () => {
+  const plain = {
+    commitHash: "a",
+    commitCol: 0,
+    commitColor: "#F5A623",
+    segments: [{ topCol: 0, botCol: 0, color: "#F5A623" }],
+    numCols: 1,
+  };
+
+  it("draws no ring unless asked", () => {
+    expect(renderSvg(plain, 21, 1)).not.toContain("#73c991");
+  });
+
+  it("draws a ring around the dot when asked", () => {
+    const svg = renderSvg(plain, 21, 1, { worktree: true });
+    expect(svg).toContain("#73c991");
+    expect(svg).toMatch(/fill="none"[^>]*stroke="#73c991"/);
+  });
+
+  it("puts the ring outside the dot", () => {
+    const svg = renderSvg(plain, 21, 1, { worktree: true });
+    const ring = svg.match(/r="([\d.]+)"[^>]*stroke="#73c991"/);
+    expect(Number(ring![1])).toBeGreaterThan(5);
+  });
+
+  it("keeps the ring inside the row at a comfortable line height", () => {
+    const svg = renderSvg(plain, 21, 1, { worktree: true });
+    const radii = [...svg.matchAll(/cy="([\d.]+)"[^>]*r="([\d.]+)"/g)];
+    for (const [, cy, r] of radii) {
+      expect(Number(cy) - Number(r)).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("shrinks the ring rather than clipping it on a tight row", () => {
+    const svg = renderSvg(plain, 14, 1, { worktree: true });
+    const ring = svg.match(/r="([\d.]+)"[^>]*stroke="#73c991"/);
+    if (ring) {
+      // Fits within half the row height, so nothing is cut off
+      expect(Number(ring[1])).toBeLessThanOrEqual(7);
+    }
+  });
+
+  it("drops the ring entirely when the row is too short to clear the dot", () => {
+    // 11px row: midY 5.5, so no ring can sit outside a radius-5 dot
+    expect(renderSvg(plain, 11, 1, { worktree: true })).not.toContain("#73c991");
+  });
+
+  it("still draws the dot and lines when the ring is dropped", () => {
+    const svg = renderSvg(plain, 11, 1, { worktree: true });
+    expect(svg).toContain('fill="#F5A623"');
+    expect(svg).toContain("<path");
+    expect(svg).toContain("</svg>");
+  });
+});

@@ -6,7 +6,7 @@ import { Position, Range, __reset, __state, makeFakeDocument, makeFakeEditor } f
 import { GraphDecorationEngine } from "../src/decorations/graphDecorations.js";
 import { GitGraphProvider } from "../src/providers/gitGraphProvider.js";
 import { computeGraphLayout } from "../src/graph/layout.js";
-import { COLOR } from "../src/ui/theme.js";
+import { COLOR, REF_BADGE_COLOR } from "../src/ui/theme.js";
 import type { Commit, Ref } from "../src/git/types.js";
 
 let storageDir: string;
@@ -352,55 +352,110 @@ describe("ref badge decorations", () => {
   });
 });
 
-describe("worktree rows", () => {
-  it("tints the whole row of a commit checked out in another worktree", () => {
+describe("worktree marks", () => {
+  const worktreeRef = { name: "feature", type: "worktree" as const };
+
+  /** The SVG written for a given row, read back off disk. */
+  function tileFor(line: number, editor: { __decorations: Map<unknown, unknown> }) {
+    const tiles = __state.decorationTypes.filter((d) => "before" in d.options);
+    const before = tiles[line].options.before as { contentIconPath: { fsPath: string } };
+    return fs.readFileSync(before.contentIconPath.fsPath, "utf8");
+  }
+
+  it("rings the commit dot of a row checked out in another worktree", () => {
     const commits = [
-      commit("a".repeat(40), { refs: [{ name: "feature", type: "worktree" }] }),
+      commit("a".repeat(40), { refs: [worktreeRef] }),
       commit("b".repeat(40)),
     ];
     const { engine, editor, rows } = setup(commits);
     engine.apply(editor as never, rows, commits);
 
-    const tinted = __state.decorationTypes.filter(
-      (d) => d.options.backgroundColor === COLOR.worktreeRow
-    );
-    expect(tinted).toHaveLength(1);
-    expect(tinted[0].options.isWholeLine).toBe(true);
-    // Only the worktree row, not its neighbour
-    expect(editor.__decorations.get(tinted[0])).toHaveLength(1);
+    expect(tileFor(0, editor)).toContain(COLOR.worktreeAccent);
+    // The neighbouring row gets no ring
+    expect(tileFor(1, editor)).not.toContain(COLOR.worktreeAccent);
   });
 
-  it("marks worktree rows in the overview ruler so they're findable when scrolled away", () => {
-    const commits = [commit("a".repeat(40), { refs: [{ name: "feature", type: "worktree" }] })];
+  it("draws the ring outside the dot, not over it", () => {
+    const commits = [commit("a".repeat(40), { refs: [worktreeRef] })];
     const { engine, editor, rows } = setup(commits);
     engine.apply(editor as never, rows, commits);
-    const tinted = __state.decorationTypes.find(
-      (d) => d.options.backgroundColor === COLOR.worktreeRow
-    )!;
-    expect(tinted.options.overviewRulerColor).toBeTruthy();
+
+    const svg = tileFor(0, editor);
+    const radii = [...svg.matchAll(/r="([\d.]+)"/g)].map((m) => Number(m[1]));
+    // The ring's radius exceeds the dot's, so the dot stays visible inside it
+    expect(Math.max(...radii)).toBeGreaterThan(Math.min(...radii));
   });
 
-  it("tints nothing when no commit is checked out elsewhere", () => {
+  it("gives the ring no fill, so the lane colour still reads through", () => {
+    const commits = [commit("a".repeat(40), { refs: [worktreeRef] })];
+    const { engine, editor, rows } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+    expect(tileFor(0, editor)).toMatch(
+      new RegExp(`fill="none"[^>]*stroke="${COLOR.worktreeAccent}"`)
+    );
+  });
+
+  it("does not tint the row, so the active row and selection still show", () => {
+    const commits = [commit("a".repeat(40), { refs: [worktreeRef] })];
+    const { engine, editor, rows } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+
+    // Nothing added a whole-line background beyond the active-row treatment
+    const fills = __state.decorationTypes.filter(
+      (d) => d.options.isWholeLine === true && d.options.backgroundColor
+    );
+    expect(fills).toHaveLength(0);
+  });
+
+  it("ticks the overview ruler so off-screen worktrees are findable", () => {
+    const commits = [commit("a".repeat(40), { refs: [worktreeRef] })];
+    const { engine, editor, rows } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+    const ticks = __state.decorationTypes.filter(
+      (d) => d.options.overviewRulerColor === REF_BADGE_COLOR.worktree
+    );
+    expect(ticks).toHaveLength(1);
+    expect(editor.__decorations.get(ticks[0])).toHaveLength(1);
+  });
+
+  it("adds no ruler tick when nothing is checked out elsewhere", () => {
     const commits = [commit("a".repeat(40), { refs: [{ name: "main", type: "branch" }] })];
     const { engine, editor, rows } = setup(commits);
     engine.apply(editor as never, rows, commits);
     expect(
-      __state.decorationTypes.filter((d) => d.options.backgroundColor === COLOR.worktreeRow)
+      __state.decorationTypes.filter(
+        (d) => d.options.overviewRulerColor === REF_BADGE_COLOR.worktree
+      )
     ).toHaveLength(0);
   });
 
-  it("tints every row that has a worktree, not just the first", () => {
+  it("does not share a cached tile between ringed and plain rows", () => {
+    // Structurally identical rows differing only in the mark
     const commits = [
-      commit("a".repeat(40), { refs: [{ name: "feature", type: "worktree" }] }),
+      commit("a".repeat(40), { refs: [worktreeRef] }),
+      commit("b".repeat(40)),
+    ];
+    const { engine, editor, rows } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+    const tiles = __state.decorationTypes.filter((d) => "before" in d.options);
+    const paths = tiles.map(
+      (d) => (d.options.before as { contentIconPath: { fsPath: string } }).contentIconPath.fsPath
+    );
+    expect(paths[0]).not.toBe(paths[1]);
+  });
+
+  it("marks every worktree row, not just the first", () => {
+    const commits = [
+      commit("a".repeat(40), { refs: [worktreeRef] }),
       commit("b".repeat(40)),
       commit("c".repeat(40), { refs: [{ name: "other", type: "worktree" }] }),
     ];
     const { engine, editor, rows } = setup(commits);
     engine.apply(editor as never, rows, commits);
-    const tinted = __state.decorationTypes.find(
-      (d) => d.options.backgroundColor === COLOR.worktreeRow
+    const ticks = __state.decorationTypes.find(
+      (d) => d.options.overviewRulerColor === REF_BADGE_COLOR.worktree
     )!;
-    expect(editor.__decorations.get(tinted)).toHaveLength(2);
+    expect(editor.__decorations.get(ticks)).toHaveLength(2);
   });
 
   it("gives a worktree its W badge alongside the branch badge", () => {
@@ -416,7 +471,7 @@ describe("worktree rows", () => {
     engine.apply(editor as never, rows, commits);
     expect(text).toContain(" B feature ");
     expect(text).toContain(" W feature ");
-    // And the W badge hit-tests back to the worktree ref, not the branch
+    // The W badge hit-tests back to the worktree ref, not the branch
     const hit = engine.getRefAt(new Position(0, text.indexOf(" W feature ") + 4) as never);
     expect(hit?.ref.type).toBe("worktree");
   });

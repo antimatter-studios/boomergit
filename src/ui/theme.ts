@@ -44,10 +44,11 @@ export const COLOR = {
   badgeHighlight: "#ff3333",
 
   /**
-   * Rows checked out in another working tree. Dark enough that the normal row
-   * colours stay readable on top of it — it is a tint, not a highlight.
+   * Anything marking "another working tree has this checked out": the ring
+   * around the commit dot, its badge, and its tick in the overview ruler. One
+   * token so the three cannot drift apart.
    */
-  worktreeRow: "#1b3a29",
+  worktreeAccent: "#73c991",
 
   /** A row picked for compare, and its marker in the overview ruler. */
   selectedRow: "#cc3333",
@@ -76,5 +77,5 @@ export const REF_BADGE_COLOR: Record<RefType, string> = {
   note: "#b5cea8",
   pr: "#569cd6",
   other: "#888888",
-  worktree: "#73c991",
+  worktree: COLOR.worktreeAccent,
 };
