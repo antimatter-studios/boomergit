@@ -5,7 +5,7 @@ import { computeDiffTarget } from "../src/ui/diffTarget.js";
 import { EMPTY_REF } from "../src/providers/gitFileContentProvider.js";
 import { TIMING } from "../src/ui/timings.js";
 import { COLOR, REF_BADGE_COLOR } from "../src/ui/theme.js";
-import { REF_SIGIL, REF_LABEL, type Commit, type Ref } from "../src/git/types.js";
+import { parseRefs, REF_SIGIL, REF_LABEL, type Commit, type Ref } from "../src/git/types.js";
 import type { ChangedFile } from "../src/providers/changedFilesProvider.js";
 
 function commit(over: Partial<Commit> = {}): Commit {
@@ -118,6 +118,19 @@ describe("buildBadgeMenu", () => {
     // Can't happen in practice, but the message must be the accurate one
     const md = buildBadgeMenu(branch, commit(), { currentBranch: "feature", heldByWorktree: "wt-feature", worktreeBlockedBy: "wt-feature" });
     expect(md).toContain("Cannot delete current branch");
+  });
+
+  it("offers no branch actions for git's 'replaced' decoration", () => {
+    // The harm the misclassification caused: `replaced` is not a branch, so
+    // checkout and delete would both fail. Parsed from git's own decoration
+    // rather than constructed, so this guards the whole path — a hardcoded
+    // `type: "other"` here would pass even if classification regressed.
+    const [ref] = parseRefs("replaced");
+    const md = buildBadgeMenu(ref, commit(), { currentBranch: "main" });
+    expect(md).not.toContain("Checkout");
+    expect(md).not.toContain("Delete Branch");
+    expect(md).not.toContain("Create Worktree");
+    expect(md).toContain("Copy Ref Name");
   });
 
   it("offers no worktree actions on a worktree badge itself", () => {
