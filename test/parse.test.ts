@@ -135,6 +135,25 @@ describe("parseRefs (--decorate=full)", () => {
     expect(parseRefs("refs/changes/34/1234/2")).toEqual([{ name: "#1234", type: "pr" }]);
   });
 
+  it("reads git's 'replaced' decoration as a ref, not a branch", () => {
+    // git emits the bare word for a commit with a refs/replace/* ref; there is
+    // no branch of that name to check out or delete.
+    expect(parseRefs("replaced")).toEqual([{ name: "replaced", type: "other" }]);
+  });
+
+  it("still treats a real branch named 'replaced-thing' as a branch", () => {
+    expect(parseRefs("refs/heads/replaced-thing")).toEqual([
+      { name: "replaced-thing", type: "branch" },
+    ]);
+  });
+
+  it("classifies bisect refs, which arrive as full paths", () => {
+    expect(parseRefs("refs/bisect/bad")).toEqual([{ name: "bisect/bad", type: "other" }]);
+    expect(parseRefs("refs/bisect/good-abc123")).toEqual([
+      { name: "bisect/good-abc123", type: "other" },
+    ]);
+  });
+
   it("falls back to 'other' for unknown namespaces", () => {
     expect(parseRefs("refs/bisect/bad")).toEqual([{ name: "bisect/bad", type: "other" }]);
     expect(parseRefs("refs/replace/abc123")).toEqual([{ name: "replace/abc123", type: "other" }]);

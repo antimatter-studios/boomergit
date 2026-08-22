@@ -88,6 +88,11 @@ const PR_PREFIXES = ["refs/pull/", "refs/merge-requests/", "refs/pull-requests/"
 
 function classify(full: string): Ref {
   if (full === "HEAD") return { name: "HEAD", type: "head" };
+  // A commit carrying a refs/replace/* ref is decorated as the bare word
+  // "replaced" — not a ref path, even under --decorate=full. Read as a branch
+  // it would offer to check out and delete a branch that does not exist.
+  // (Bisect refs are not special-cased like this; they arrive as refs/bisect/*.)
+  if (full === "replaced") return { name: "replaced", type: "other" };
   if (full.startsWith("refs/heads/")) return { name: full.slice(11), type: "branch" };
   if (full.startsWith("refs/remotes/")) return { name: full.slice(13), type: "remote" };
   if (full.startsWith("refs/tags/")) return { name: full.slice(10), type: "tag" };

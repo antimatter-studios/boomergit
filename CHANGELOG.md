@@ -34,6 +34,10 @@ Release notes.
   that, or git will report it as untracked.
 
 ### Fixed
+- A commit with a `refs/replace/*` ref was badged as a local branch called
+  `replaced`, and its menu offered to check out and delete a branch that doesn't
+  exist. git decorates such commits with that bare word rather than a ref path;
+  it is now badged `?` like the other uncommon namespaces.
 - Checkout and Delete Branch were offered for branches another working tree has
   checked out, where git refuses both outright. They are now greyed with the
   worktree named, as is Create Worktree for a branch already checked out
