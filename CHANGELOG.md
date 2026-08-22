@@ -11,6 +11,8 @@ Release notes.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-22
+
 ### Added
 - **Ref badges now say what kind of ref they are.** Every badge leads with a
   white box holding a bold capital: **B** branch, **R** remote-tracking,
