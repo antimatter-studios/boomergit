@@ -11,8 +11,6 @@ Release notes.
 
 ## [Unreleased]
 
-## [Unreleased]
-
 ### Added
 - **Worktrees.** A Worktrees panel at the top of the sidebar lists every working
   tree of the repository — branch or directory name, whether it's detached,
@@ -36,11 +34,11 @@ Release notes.
   that, or git will report it as untracked.
 
 ### Fixed
-- The working tree you have open was marked as if it were somebody else's —
-  badged `W` and tinted — whenever the repository was opened through a symlinked
-  path. git reports resolved paths, so a repository opened at `/tmp/x` appears
-  as `/private/tmp/x` and the comparison failed. BoomerGit now asks git which
-  working tree is current instead of comparing the path it was given.
+- Which working tree you have open is now identified by asking git rather than
+  by comparing paths. git reports resolved paths, so a repository opened at
+  `/tmp/x` appears as `/private/tmp/x` and the comparison failed — mislabelling
+  which worktree the panel called current, and greying out actions on the branch
+  you were actually on. Any symlinked path did this, not just `/tmp`.
 - A commit with a `refs/replace/*` ref was badged as a local branch called
   `replaced`, and its menu offered to check out and delete a branch that doesn't
   exist. git decorates such commits with that bare word rather than a ref path;
