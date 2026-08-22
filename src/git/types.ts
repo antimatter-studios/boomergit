@@ -65,6 +65,16 @@ export function refBadgeText(ref: Ref): string {
   return ` ${REF_SIGIL[ref.type]} ${ref.name} `;
 }
 
+/**
+ * The local branch a remote-tracking ref corresponds to: `origin/feature/x`
+ * becomes `feature/x`. Only the first segment — the remote name — is dropped,
+ * so a branch whose own name contains slashes survives intact.
+ */
+export function localBranchName(remoteRefName: string): string {
+  const firstSlash = remoteRefName.indexOf("/");
+  return firstSlash >= 0 ? remoteRefName.slice(firstSlash + 1) : remoteRefName;
+}
+
 /** Namespaces that hold code-review refs, and the segment count before the id. */
 const PR_PREFIXES = ["refs/pull/", "refs/merge-requests/", "refs/pull-requests/"];
 
