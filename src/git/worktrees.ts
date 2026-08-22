@@ -123,3 +123,74 @@ export function worktreeHolding(
 ): Worktree | undefined {
   return worktrees.find((w) => !w.isCurrent && !w.bare && w.branch === branch);
 }
+
+/** Where new worktrees are placed, from `boomergit.worktrees.location`. */
+export type WorktreeLocation = "sibling" | "custom";
+
+export interface WorktreePlacement {
+  location: WorktreeLocation;
+  /** Parent directory when location is "custom". `${workspaceFolder}` expands. */
+  customPath: string;
+  /** Absolute path of the repository the graph is showing. */
+  repoPath: string;
+}
+
+/**
+ * Characters that can't go in a path component, plus the slash a branch name
+ * so often contains — `feat/thing` has to become one directory, not two.
+ */
+const UNSAFE_IN_DIR_NAME = /[/\\:*?"<>|\s]+/g;
+
+/**
+ * A branch name as a single directory component.
+ *
+ * Deliberately not a strict ASCII slug: a branch named `café-fix` should keep
+ * its name, since the filesystem has no problem with it. Only characters that
+ * genuinely can't appear in one path component are replaced.
+ */
+export function worktreeDirName(branch: string): string {
+  return branch
+    .replace(UNSAFE_IN_DIR_NAME, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/** Join two path fragments without needing node:path in this module. */
+function join(base: string, child: string): string {
+  return `${base.replace(/\/+$/, "")}/${child}`;
+}
+
+function parentOf(absolutePath: string): string {
+  const trimmed = absolutePath.replace(/\/+$/, "");
+  const cut = trimmed.lastIndexOf("/");
+  return cut <= 0 ? "/" : trimmed.slice(0, cut);
+}
+
+function nameOf(absolutePath: string): string {
+  return absolutePath.replace(/\/+$/, "").split("/").pop() ?? absolutePath;
+}
+
+/**
+ * Where a new worktree for `branch` should be created.
+ *
+ * "sibling" puts it next to the repository as `<repo>-<branch>`, which keeps
+ * worktrees out of the repository itself — nothing to gitignore, and the editor
+ * never shows them as stray folders.
+ *
+ * "custom" takes a parent directory, so `${workspaceFolder}/.worktrees` gives
+ * the inside-the-repo layout (worth gitignoring). A relative path is resolved
+ * against the repository, and an empty one falls back to sibling rather than
+ * creating a worktree somewhere surprising.
+ */
+export function resolveWorktreePath(branch: string, placement: WorktreePlacement): string {
+  const dirName = worktreeDirName(branch);
+  const { location, customPath, repoPath } = placement;
+
+  if (location === "custom" && customPath.trim()) {
+    const expanded = customPath.trim().replace(/\$\{workspaceFolder\}/g, repoPath);
+    const parent = expanded.startsWith("/") ? expanded : join(repoPath, expanded);
+    return join(parent, dirName);
+  }
+
+  return join(parentOf(repoPath), `${nameOf(repoPath)}-${dirName}`);
+}

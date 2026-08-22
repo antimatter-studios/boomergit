@@ -124,6 +124,10 @@
       {
         "command": "boomergit.copyWorktreePath",
         "title": "Copy Worktree Path"
+      },
+      {
+        "command": "boomergit.createWorktree",
+        "title": "Create Worktree from Branch"
       }
     ],
     "menus": {
@@ -173,6 +177,10 @@
         },
         {
           "command": "boomergit.copyWorktreePath",
+          "when": "false"
+        },
+        {
+          "command": "boomergit.createWorktree",
           "when": "false"
         }
       ],
@@ -225,6 +233,24 @@
           "type": "boolean",
           "default": false,
           "description": "Automatically refresh the graph when the repository's refs change (watches .git). Toggle from the status bar while the graph is open."
+        },
+        "boomergit.worktrees.location": {
+          "type": "string",
+          "enum": [
+            "sibling",
+            "custom"
+          ],
+          "enumDescriptions": [
+            "Next to the repository, named <repo>-<branch>. Keeps worktrees outside the repository, so there is nothing to gitignore and the editor never shows them as stray folders.",
+            "Inside the directory given by #boomergit.worktrees.customPath#."
+          ],
+          "default": "sibling",
+          "description": "Where BoomerGit creates new worktrees. The path is always shown for confirmation before anything is created."
+        },
+        "boomergit.worktrees.customPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Parent directory for new worktrees when `#boomergit.worktrees.location#` is `custom`. `${workspaceFolder}` expands to the repository root, and a relative path is resolved against it.\n\nFor an inside-the-repository layout use `${workspaceFolder}/.worktrees` and add `.worktrees/` to your `.gitignore`.\n\nLeft empty, this falls back to the sibling layout rather than creating a worktree somewhere unexpected."
         }
       }
     }

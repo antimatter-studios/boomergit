@@ -4,7 +4,7 @@ import { gitRun, gitQuery, gitQueryTrimmed } from "./git/exec.js";
 import { localBranchName } from "./git/types.js";
 import { TIMING } from "./ui/timings.js";
 import { COLOR } from "./ui/theme.js";
-import { buildBadgeMenu, buildRowMenu } from "./ui/menus.js";
+import { buildBadgeMenu, buildRowMenu, type BadgeMenuContext } from "./ui/menus.js";
 import { resolveClickIntent } from "./ui/clickIntent.js";
 import { computeDiffTarget } from "./ui/diffTarget.js";
 import type { GraphRow } from "./graph/types.js";
@@ -19,9 +19,11 @@ import { GitFileContentProvider, FILE_SCHEME, fileUri } from "./providers/gitFil
 import { WorktreesProvider } from "./providers/worktreesProvider.js";
 import {
   listWorktrees,
+  resolveWorktreePath,
   worktreeHolding,
   worktreeLabel,
   type Worktree,
+  type WorktreeLocation,
 } from "./git/worktrees.js";
 
 const SCHEME = "boomergit";
@@ -288,18 +290,7 @@ export function activate(context: vscode.ExtensionContext) {
         md.supportThemeIcons = true;
 
         if (refHit) {
-          const holder =
-            refHit.ref.type === "branch" || refHit.ref.type === "remote"
-              ? worktreeHolding(worktrees, refHit.ref.name)
-              : undefined;
-          md.appendMarkdown(
-            buildBadgeMenu(
-              refHit.ref,
-              commit,
-              currentBranch,
-              holder ? worktreeLabel(holder) : undefined
-            )
-          );
+          md.appendMarkdown(buildBadgeMenu(refHit.ref, commit, menuContextFor(refHit.ref)));
           return new vscode.Hover(md, refHit.range);
         }
         md.appendMarkdown(buildRowMenu(commit));
@@ -529,6 +520,86 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  /**
+   * What a badge's menu needs to know about the ref it belongs to.
+   *
+   * A remote ref is resolved to the local branch a checkout or worktree would
+   * actually create, since that is the name git refuses to use twice.
+   */
+  function menuContextFor(ref: { name: string; type: string }): BadgeMenuContext {
+    if (ref.type !== "branch" && ref.type !== "remote") return { currentBranch };
+    const branch = ref.type === "remote" ? localBranchName(ref.name) : ref.name;
+    const holder = worktreeHolding(worktrees, branch);
+    return {
+      currentBranch,
+      heldByWorktree: holder ? worktreeLabel(holder) : undefined,
+      // git refuses a branch checked out anywhere, this tree included, so the
+      // branch you are on can't get a worktree either.
+      worktreeBlockedBy:
+        branch === currentBranch
+          ? "this worktree"
+          : holder
+            ? worktreeLabel(holder)
+            : undefined,
+    };
+  }
+
+  /** Where new worktrees go, from settings. */
+  function worktreePlacement(repoPath: string) {
+    const config = vscode.workspace.getConfiguration("boomergit");
+    return {
+      location: config.get<WorktreeLocation>("worktrees.location", "sibling"),
+      customPath: config.get<string>("worktrees.customPath", ""),
+      repoPath,
+    };
+  }
+
+  const createWorktreeCmd = vscode.commands.registerCommand(
+    "boomergit.createWorktree",
+    async (refName: string, refType: string) => {
+      if (!workspaceCwd) return;
+      // A remote ref becomes a local branch tracking it; `worktree add` with a
+      // remote ref alone would leave the new tree on a detached HEAD.
+      const isRemote = refType === "remote";
+      const branch = isRemote ? localBranchName(refName) : refName;
+      const suggested = resolveWorktreePath(branch, worktreePlacement(workspaceCwd));
+
+      // Always shown, never silent: a worktree creates a directory outside the
+      // project, so the path is confirmed before anything touches the disk.
+      const chosen = await vscode.window.showInputBox({
+        title: `Create worktree for ${branch}`,
+        prompt: "Directory for the new working tree",
+        value: suggested,
+        valueSelection: [suggested.lastIndexOf("/") + 1, suggested.length],
+      });
+      if (!chosen) return;
+
+      const args = isRemote
+        ? ["worktree", "add", "-b", branch, chosen, refName]
+        : ["worktree", "add", chosen, refName];
+      try {
+        await gitRun(args, workspaceCwd);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        vscode.window.showErrorMessage(`Create worktree failed: ${msg}`);
+        return;
+      }
+
+      await refreshGraph({ preserveView: true });
+      const open = await vscode.window.showInformationMessage(
+        `Worktree for ${branch} created at ${chosen}`,
+        "Open in New Window"
+      );
+      if (open) {
+        await vscode.commands.executeCommand(
+          "vscode.openFolder",
+          vscode.Uri.file(chosen),
+          { forceNewWindow: true }
+        );
+      }
+    }
+  );
+
   /** Select and scroll to the row a worktree's HEAD sits on. */
   const revealWorktreeCmd = vscode.commands.registerCommand(
     "boomergit.revealWorktree",
@@ -753,7 +824,7 @@ export function activate(context: vscode.ExtensionContext) {
     providerReg, fileProviderReg, sidebarView, showGraphCmd, checkoutRefCmd, deleteBranchCmd, createBranchCmd, copyTextCmd, hoverProvider, selectionWatcher,
     commitInfoReg, changedFilesView, worktreesView, selectUpCmd, selectDownCmd, openFileDiffCmd, visibleEditorsWatcher, tabCloseWatcher,
     refreshCmd, toggleAutoRefreshCmd, configWatcher, statusBar,
-    revealWorktreeCmd, openWorktreeCmd, copyWorktreePathCmd,
+    revealWorktreeCmd, openWorktreeCmd, copyWorktreePathCmd, createWorktreeCmd,
     { dispose: () => { if (autoRefreshTimer) clearInterval(autoRefreshTimer); gitStateSub?.dispose(); openRepoSub?.dispose(); decorationEngine?.dispose(); } },
   );
 }

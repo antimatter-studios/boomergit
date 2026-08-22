@@ -54,6 +54,19 @@ function copyHashEntry(commit: Commit): string {
   );
 }
 
+/** What the caller knows about a ref that changes which actions are possible. */
+export interface BadgeMenuContext {
+  /** The branch checked out in the working tree the editor has open. */
+  currentBranch?: string;
+  /** Another working tree holding this ref's branch, if one does. */
+  heldByWorktree?: string;
+  /**
+   * Why a worktree cannot be created for this ref, if it cannot — git refuses
+   * a branch already checked out anywhere, including here.
+   */
+  worktreeBlockedBy?: string;
+}
+
 /**
  * The menu for clicking a ref badge.
  *
@@ -65,10 +78,9 @@ function copyHashEntry(commit: Commit): string {
 export function buildBadgeMenu(
   ref: Ref,
   commit: Commit,
-  currentBranch?: string,
-  /** Name of the other working tree holding this branch, if one does. */
-  heldByWorktree?: string
+  context: BadgeMenuContext = {}
 ): string {
+  const { currentBranch, heldByWorktree, worktreeBlockedBy } = context;
   const entries: string[] = [];
 
   if (isCheckoutable(ref)) {
@@ -78,6 +90,18 @@ export function buildBadgeMenu(
       heldByWorktree
         ? disabled(`$(git-branch)&ensp;Checked out in worktree ${heldByWorktree}`)
         : commandLink("$(git-branch)&ensp;Checkout Branch", "boomergit.checkoutRef", [
+            ref.name,
+            ref.type,
+          ])
+    );
+
+    // A worktree checks the branch out alongside, instead of moving this one.
+    // git refuses a branch already checked out anywhere — including the tree
+    // you are in — so both cases are named rather than offered and failed.
+    entries.push(
+      worktreeBlockedBy
+        ? disabled(`$(list-tree)&ensp;Already checked out in ${worktreeBlockedBy}`)
+        : commandLink("$(list-tree)&ensp;Create Worktree&hellip;", "boomergit.createWorktree", [
             ref.name,
             ref.type,
           ])

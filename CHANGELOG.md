@@ -11,6 +11,32 @@ Release notes.
 
 ## [Unreleased]
 
+## [Unreleased]
+
+### Added
+- **Worktrees.** A Worktrees panel at the top of the sidebar lists every working
+  tree of the repository — branch or directory name, whether it's detached,
+  locked or prunable, and the commit it sits on. Clicking one jumps the graph to
+  that commit; its context menu opens it in a new window or copies its path.
+- Commits another working tree has checked out are **ringed in the graph** and
+  ticked in the overview ruler, and carry a `W` badge naming the worktree. The
+  tree you have open isn't marked — its row already inverts to say so.
+- **Create Worktree** on a branch badge, checking the branch out alongside
+  rather than moving the tree you're in. From a remote branch it creates a local
+  branch tracking it. The target path is always shown for confirmation first.
+- Two settings for where worktrees go: `boomergit.worktrees.location`
+  (`sibling`, the default, puts them next to the project as `<repo>-<branch>`;
+  `custom` uses a directory you name) and `boomergit.worktrees.customPath`,
+  which understands `${workspaceFolder}` — so `${workspaceFolder}/.worktrees`
+  gives an in-repository layout. Add `.worktrees/` to `.gitignore` if you use
+  that, or git will report it as untracked.
+
+### Fixed
+- Checkout and Delete Branch were offered for branches another working tree has
+  checked out, where git refuses both outright. They are now greyed with the
+  worktree named, as is Create Worktree for a branch already checked out
+  anywhere — including the one you're in.
+
 ## [0.4.0] - 2026-08-22
 
 ### Added

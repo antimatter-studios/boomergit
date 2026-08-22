@@ -3,6 +3,8 @@ import {
   parseWorktreeList,
   worktreeLabel,
   worktreeHolding,
+  worktreeDirName,
+  resolveWorktreePath,
 } from "../src/git/worktrees.js";
 
 /** Build porcelain output the way `git worktree list --porcelain` emits it. */
@@ -189,5 +191,117 @@ describe("worktreeHolding", () => {
 
   it("never returns the bare parent", () => {
     expect(worktreeHolding(list, "")).toBeUndefined();
+  });
+});
+
+describe("worktreeDirName", () => {
+  it("leaves a simple name alone", () => {
+    expect(worktreeDirName("feature")).toBe("feature");
+  });
+
+  it("flattens the slashes in a namespaced branch", () => {
+    expect(worktreeDirName("feat/nested/thing")).toBe("feat-nested-thing");
+  });
+
+  it("keeps non-ASCII characters, which the filesystem handles fine", () => {
+    expect(worktreeDirName("café-fix")).toBe("café-fix");
+  });
+
+  it("replaces characters a path component cannot hold", () => {
+    expect(worktreeDirName("odd:name*with?chars")).toBe("odd-name-with-chars");
+  });
+
+  it("collapses runs of replacements into one dash", () => {
+    expect(worktreeDirName("a//b")).toBe("a-b");
+    expect(worktreeDirName("a   b")).toBe("a-b");
+  });
+
+  it("trims leading and trailing dashes", () => {
+    expect(worktreeDirName("/leading/")).toBe("leading");
+  });
+});
+
+describe("resolveWorktreePath", () => {
+  const repoPath = "/Users/me/projects/boomergit";
+
+  it("defaults to a sibling named <repo>-<branch>", () => {
+    expect(
+      resolveWorktreePath("feature", { location: "sibling", customPath: "", repoPath })
+    ).toBe("/Users/me/projects/boomergit-feature");
+  });
+
+  it("flattens a namespaced branch into the sibling's name", () => {
+    expect(
+      resolveWorktreePath("feat/thing", { location: "sibling", customPath: "", repoPath })
+    ).toBe("/Users/me/projects/boomergit-feat-thing");
+  });
+
+  it("puts a worktree under an absolute custom directory", () => {
+    expect(
+      resolveWorktreePath("feature", {
+        location: "custom",
+        customPath: "/tmp/trees",
+        repoPath,
+      })
+    ).toBe("/tmp/trees/feature");
+  });
+
+  it("expands ${workspaceFolder}, giving the inside-the-repo layout", () => {
+    expect(
+      resolveWorktreePath("feature", {
+        location: "custom",
+        customPath: "${workspaceFolder}/.worktrees",
+        repoPath,
+      })
+    ).toBe("/Users/me/projects/boomergit/.worktrees/feature");
+  });
+
+  it("resolves a relative custom path against the repository", () => {
+    expect(
+      resolveWorktreePath("feature", {
+        location: "custom",
+        customPath: ".worktrees",
+        repoPath,
+      })
+    ).toBe("/Users/me/projects/boomergit/.worktrees/feature");
+  });
+
+  it("falls back to sibling when custom is selected but left empty", () => {
+    // Better than creating a worktree at an unexpected place
+    expect(
+      resolveWorktreePath("feature", { location: "custom", customPath: "", repoPath })
+    ).toBe("/Users/me/projects/boomergit-feature");
+  });
+
+  it("falls back to sibling when custom is only whitespace", () => {
+    expect(
+      resolveWorktreePath("feature", { location: "custom", customPath: "   ", repoPath })
+    ).toBe("/Users/me/projects/boomergit-feature");
+  });
+
+  it("tolerates a trailing slash on the repository path", () => {
+    expect(
+      resolveWorktreePath("feature", {
+        location: "sibling",
+        customPath: "",
+        repoPath: "/Users/me/projects/boomergit/",
+      })
+    ).toBe("/Users/me/projects/boomergit-feature");
+  });
+
+  it("tolerates a trailing slash on the custom directory", () => {
+    expect(
+      resolveWorktreePath("feature", {
+        location: "custom",
+        customPath: "/tmp/trees/",
+        repoPath,
+      })
+    ).toBe("/tmp/trees/feature");
+  });
+
+  it("handles a repository at the filesystem root", () => {
+    expect(
+      resolveWorktreePath("feature", { location: "sibling", customPath: "", repoPath: "/repo" })
+    ).toBe("/repo-feature");
   });
 });
