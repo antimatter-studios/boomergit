@@ -18,12 +18,15 @@ Release notes.
 ### Fixed
 - Local branches with a `/` in the name (`chore/guard-refresh`) were classified as remote-tracking branches, so their badge menu offered no Delete Branch and the wrong Checkout. Ref classification now reads full ref paths (`--decorate=full`) instead of guessing from the slash.
 - Two debug `console.log` calls were left in the release build. One fired on every commit click and dumped 300 characters of git output into the extension host log.
-- A failure while building the Changed Files tree showed as an empty list, indistinguishable from a commit that changed nothing. It now shows a "Failed to list changed files" entry with the error in its tooltip.
-- Malformed `git diff-tree` output (a status line with no path) threw while assembling the Changed Files tree, leaving the view stuck on the previous commit. Such lines are now skipped and the rest of the diff is still shown.
+- Files with non-ASCII or otherwise special characters in their names (`café.txt`) appeared in Changed Files under a mangled, C-quoted name, and their diff opened blank on both sides with no error. BoomerGit now reads `git diff-tree -z`, whose output is unquoted.
+- A `git diff-tree` failure showed as an empty Changed Files list, indistinguishable from a commit that changed nothing. It now shows a "Failed to list changed files" entry with git's own message in the tooltip.
+- Truncated `diff-tree` output threw while assembling the Changed Files tree, leaving the view stuck on the previous commit. Such records are now skipped and the rest of the diff is still shown.
+- With no workspace folder open, Delete Branch asked for confirmation and Create Branch asked for a name, then both silently did nothing. They now return before prompting.
+- The `origin/HEAD` badge offered "Checkout Branch", which ran `git checkout HEAD` — a no-op that still reported "Checked out: HEAD". A remote's symbolic HEAD is no longer offered for checkout.
 
 ### Changed
 - Internal refactor for readability, with no change to behaviour: `git` invocation centralised into one module (it was hand-wrapped in a Promise in eight places, with an inconsistent output-buffer ceiling), the three repository-mutating commands reduced to one shared implementation, and interaction timings and colours moved into named, documented constants. Click-intent resolution, click-menu construction and diff-side selection are now separate pure modules. See `docs/human-code-report-2026-08-22.md`.
-- Test coverage raised from 18.7% to 98.5% of lines (36 → 269 tests), unblocked by a `vscode` test double that makes the previously untestable extension modules loadable under Vitest. CI now enforces a 70% per-file floor via `npm run test:coverage`.
+- Test coverage raised from 18.7% to 98.8% of lines (36 → 284 tests), unblocked by a `vscode` test double that makes the previously untestable extension modules loadable under Vitest. CI now enforces a 70% per-file floor via `npm run test:coverage`.
 
 ## [0.3.2] - 2026-06-22
 

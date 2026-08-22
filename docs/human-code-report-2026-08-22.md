@@ -6,9 +6,9 @@
 
 | | Before | After |
 |---|---|---|
-| Tests | 36 | 269 |
-| Line coverage | 18.7% | 98.5% |
-| Branch coverage | 18.2% | 88.5% |
+| Tests | 36 | 284 |
+| Line coverage | 18.7% | 98.8% |
+| Branch coverage | 18.2% | 88.56% |
 | Modules at 0% coverage | 5 | 0 |
 | `src/extension.ts` | 676 lines, one function | 640 lines, logic extracted |
 
@@ -298,11 +298,11 @@ None. All 23 items were applied, including the three originally deferred — see
 
 | | Before | After |
 |---|---|---|
-| Tests passing | 36 | 275 |
+| Tests passing | 36 | 284 |
 | Tests failing | 0 | 0 |
-| Statements | 18.7% | 96.2% |
-| Branches | 18.2% | 88.4% |
-| Functions | 9.3% | 95.1% |
+| Statements | 18.7% | 96.29% |
+| Branches | 18.2% | 88.56% |
+| Functions | 9.3% | 95.09% |
 | Lines | 18.7% | 98.8% |
 | `tsc --noEmit` | clean (src only) | clean (src **and** tests) |
 
@@ -402,10 +402,101 @@ around them kept.
 
 ---
 
+## Review round
+
+A high-effort review of the full PR diff found 15 issues. All were verified
+against real git behaviour before acting and all were fixed. Four were
+regressions or false claims introduced by this very refactor, which is the part
+worth dwelling on.
+
+### Correctness bugs
+
+**Non-ASCII filenames produced a broken tree entry and a blank diff.**
+`git diff-tree --name-status` C-quotes any path with non-ASCII or special
+characters — `café.txt` arrives as `"caf\303\251.txt"` — because
+`core.quotePath` defaults to true. That quoted literal is not a path `git show`
+can resolve, so the file appeared under a mangled name and clicking it opened
+two blank panes with no error (`gitQuery` swallowed the `fatal:`). Verified
+directly against git 2.50.1. Fixed by asking for `-z`, whose NUL-separated
+stream is unquoted; the parser now reads that stream instead of tab-split
+lines. Pre-existing, not introduced here.
+
+**The "Failed to list changed files" item could never appear.** This is the
+worst of the findings, because the follow-up round above claims to have fixed
+exactly what it didn't. `fetchChangedFiles` called `gitQuery`, which turns every
+failure into `""` — so a bad hash or a corrupt object still produced an empty
+tree, indistinguishable from a commit that changed nothing, and the same round
+deleted the `console.log` that had at least recorded it. The new error item only
+fired if `treeNodeToItems` threw, and hardening `parseNameStatus` in the same
+round removed the last way that could happen. It now uses `gitRun` and returns a
+discriminated result, so `showCommit` can tell "no changes" from "git failed"
+and the error item fires for the case it was written for.
+
+**Two commands prompted and then silently did nothing.** Folding the three
+mutating commands into `runGitAction` moved their `if (!workspaceCwd) return`
+guard *after* the prompt. With no workspace open, Delete Branch showed its
+modal, took the user's answer and returned with no toast of any kind; Create
+Branch took a branch name and discarded it. The guard is back before the
+prompts. Introduced by H4 in this PR.
+
+**`origin/HEAD` offered a checkout that does nothing.** `refs/remotes/origin/HEAD`
+is a symbolic ref present in every clone; classified as an ordinary remote, its
+badge offered Checkout Branch, `localBranchName` reduced it to `HEAD`, and
+`git checkout HEAD` exits 0 without changing branches — so the user got
+"Checked out: HEAD" and an unchanged graph. `isCheckoutable()` now excludes it,
+with a test proving a branch legitimately named `HEADless` still qualifies.
+
+**`moveSelection` could produce line -1.** `Math.min(lastLine, Math.max(0, …))`
+puts the clamps in the wrong order: on an empty graph `lastLine` is -1 and the
+result is -1 regardless of the inner `max`. Latent rather than live, but the
+`selectUp` it replaced was structurally incapable of it. Now
+`Math.max(0, Math.min(lastLine, …))`.
+
+### Claims that weren't true
+
+**`COLOR.editorBackground` was dead code.** `svgTileGen.ts` kept its own
+`BG_COLOR = "#1e1e1e"`, so the M4 consolidation this report describes had left
+the value with two definitions and one unused one. It now imports the token.
+
+**Documented figures disagreed with reality.** The CHANGELOG and this report's
+summary table said 269 tests / 98.5% lines while the results table in the same
+document said 275 / 98.8%. Every number here is now taken from an actual run.
+
+### Coupling that would break silently
+
+- `gitGraphProvider` still built its line with a literal `slice(0, 8)` while the
+  decoration engine derived badge offsets from `SHORT_HASH_LEN` — changing that
+  constant would have desynchronised them and sent every click menu to the
+  wrong text.
+- `EMPTY_REF` was declared in `diffTarget.ts` while `gitFileContentProvider`
+  compared against the bare string `"empty"`. The sentinel now lives with the
+  module that resolves it, and the other imports it.
+- The active-branch predicate existed verbatim in both `extension.ts` and
+  `graphDecorations.ts`, one choosing the selected row and the other the painted
+  row. `findActiveLine` is exported and shared.
+
+### The harness, and the config
+
+- Repo mode died with a raw unhandled rejection on a bad path, making its own
+  "No commits found" message unreachable — `parseGitLog` now rejects (it moved
+  to `gitRun` in this PR) and nothing caught it.
+- It hardcoded a row height of 21px against the renderer's `ROW_HEIGHT` of 24,
+  so tiles were magnified 2.21× on a page claiming 2.5×. Exactly the src-versus-
+  harness drift the script exists to avoid, in the script written to avoid it.
+- Commit subjects went into the page unescaped, so a subject containing `<div>`
+  would corrupt the layout of the page whose purpose is visual inspection.
+- `vitest.config.mts` used `__dirname` in an ESM config. Vite warned on every
+  run, and under the native config loader it would fail outright — taking the
+  `vscode` alias with it and breaking every test file.
+- One `beforeEach(() => __reset())` remained in concise-arrow form, the shape
+  CLAUDE.md now warns against.
+
+---
+
 ## Still open
 
-Nothing from the original scan. Two things a later pass might weigh, neither a
-defect and both outside the agreed scope:
+Nothing from the original scan and nothing from the review. Two things a later
+pass might weigh, neither a defect and both outside the agreed scope:
 
 - `src/extension.ts` is 640 lines. `activate()` no longer holds the decisions,
   but it still holds all the wiring. Splitting the registration itself needs
