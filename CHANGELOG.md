@@ -11,6 +11,8 @@ Release notes.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-22
+
 ### Added
 - **Worktrees.** A Worktrees panel at the top of the sidebar lists every working
   tree of the repository — branch or directory name, whether it's detached,
