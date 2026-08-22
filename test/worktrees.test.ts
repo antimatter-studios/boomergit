@@ -1,10 +1,21 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const execFileMock = vi.hoisted(() => vi.fn());
+vi.mock("node:child_process", () => ({ execFile: execFileMock }));
+
+type ExecCallback = (err: Error | null, stdout: Buffer, stderr: Buffer) => void;
+
+beforeEach(() => {
+  execFileMock.mockReset();
+});
+
 import {
   parseWorktreeList,
   worktreeLabel,
   worktreeHolding,
   worktreeDirName,
   resolveWorktreePath,
+  listWorktrees,
 } from "../src/git/worktrees.js";
 
 /** Build porcelain output the way `git worktree list --porcelain` emits it. */
@@ -142,6 +153,31 @@ describe("parseWorktreeList", () => {
     expect(parsed[1].detached).toBe(true);
     expect(parsed[2].prunable).toBe(true);
     expect(parsed[3].locked).toBe(true);
+  });
+});
+
+describe("identifying the current worktree", () => {
+  it("matches on the path git reports, ignoring trailing slashes", () => {
+    const out = porcelain(
+      ["worktree /repo", "HEAD a", "branch refs/heads/main"],
+      ["worktree /wt", "HEAD b", "branch refs/heads/other"]
+    );
+    expect(parseWorktreeList(out, "/repo/").map((w) => w.isCurrent)).toEqual([true, false]);
+  });
+
+  it("does not match a path spelled differently from git's", () => {
+    // The bug this guards: git reports /private/tmp/x for a repo opened at
+    // /tmp/x on macOS, so a raw string compare left the current worktree
+    // looking like somebody else's — badged W and tinted. listWorktrees asks
+    // git for the path instead of trusting the one the editor supplied.
+    const out = porcelain(["worktree /private/tmp/x", "HEAD a", "branch refs/heads/main"]);
+    expect(parseWorktreeList(out, "/tmp/x")[0].isCurrent).toBe(false);
+    expect(parseWorktreeList(out, "/private/tmp/x")[0].isCurrent).toBe(true);
+  });
+
+  it("marks nothing current when no path is given", () => {
+    const out = porcelain(["worktree /repo", "HEAD a", "branch refs/heads/main"]);
+    expect(parseWorktreeList(out)[0].isCurrent).toBe(false);
   });
 });
 
@@ -303,5 +339,36 @@ describe("resolveWorktreePath", () => {
     expect(
       resolveWorktreePath("feature", { location: "sibling", customPath: "", repoPath: "/repo" })
     ).toBe("/repo-feature");
+  });
+});
+
+describe("listWorktrees", () => {
+  it("asks git for the current worktree path rather than trusting cwd", async () => {
+    // The whole point of the fix: /tmp/x and /private/tmp/x are the same
+        // directory, and only git knows which spelling its own output uses.
+    const calls: string[][] = [];
+    execFileMock.mockImplementation((_cmd, args: string[], _opts, cb: ExecCallback) => {
+      calls.push(args);
+      const out = args.includes("--show-toplevel")
+        ? "/private/tmp/x\n"
+        : "worktree /private/tmp/x\nHEAD abc\nbranch refs/heads/main\n\n";
+      cb(null, Buffer.from(out), Buffer.from(""));
+    });
+
+    const list = await listWorktrees("/tmp/x");
+    expect(calls.some((a) => a.includes("--show-toplevel"))).toBe(true);
+    expect(list[0].isCurrent).toBe(true);
+  });
+
+  it("falls back to cwd when there is no top level, as in a bare repository", async () => {
+    execFileMock.mockImplementation((_cmd, args: string[], _opts, cb: ExecCallback) => {
+      const out = args.includes("--show-toplevel")
+        ? ""
+        : "worktree /bare\nbare\n\n";
+      cb(null, Buffer.from(out), Buffer.from(""));
+    });
+    const list = await listWorktrees("/bare");
+    expect(list[0].bare).toBe(true);
+    expect(list[0].isCurrent).toBe(true);
   });
 });

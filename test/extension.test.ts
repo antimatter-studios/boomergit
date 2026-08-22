@@ -41,11 +41,15 @@ const DEFAULT_LOG = [
 function gitResponds(responses: Record<string, string>, failing = new Set<string>()): void {
   execFileMock.mockImplementation((_cmd, args: string[], _opts, cb: Callback) => {
     const sub = args[0];
+    // rev-parse answers two different questions and the extension asks both:
+    // the current branch, and the working tree's root path.
+    const key =
+      sub === "rev-parse" && args.includes("--show-toplevel") ? "rev-parse:toplevel" : sub;
     if (failing.has(sub)) {
       cb(new Error("git failed"), Buffer.from(""), Buffer.from(`fatal: ${sub} refused`));
       return;
     }
-    cb(null, Buffer.from(responses[sub] ?? ""), Buffer.from(""));
+    cb(null, Buffer.from(responses[key] ?? ""), Buffer.from(""));
   });
 }
 
@@ -53,6 +57,8 @@ function defaultRepo(overrides: Record<string, string> = {}): void {
   gitResponds({
     log: DEFAULT_LOG,
     "rev-parse": "main\n",
+    // git reports resolved paths; this is what identifies the current worktree
+    "rev-parse:toplevel": "/repo\n",
     "for-each-ref": "aaa refs/heads/main\n",
     show: "second\n\nbody\n",
     "diff-tree": "M\tsrc/a.ts\n",

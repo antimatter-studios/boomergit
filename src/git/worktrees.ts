@@ -1,4 +1,4 @@
-import { gitQuery } from "./exec.js";
+import { gitQuery, gitQueryTrimmed } from "./exec.js";
 
 /**
  * A checked-out working tree of this repository.
@@ -44,7 +44,14 @@ export function worktreeLabel(worktree: Worktree): string {
  * `locked` and `prunable` are optional flags, the latter two able to carry a
  * reason on the same line.
  */
-export function parseWorktreeList(stdout: string, cwd?: string): Worktree[] {
+export function parseWorktreeList(
+  stdout: string,
+  /** Path git itself reports for the current working tree, not the one the
+   * editor was opened with — see listWorktrees. */
+  currentWorktreePath?: string
+): Worktree[] {
+  const currentPath =
+    currentWorktreePath === undefined ? undefined : normalisePath(currentWorktreePath);
   const worktrees: Worktree[] = [];
   let current: Partial<Worktree> & { path?: string } = {};
 
@@ -62,7 +69,7 @@ export function parseWorktreeList(stdout: string, cwd?: string): Worktree[] {
       lockReason: current.lockReason,
       prunable: current.prunable ?? false,
       prunableReason: current.prunableReason,
-      isCurrent: cwd !== undefined && path === cwd,
+      isCurrent: currentPath !== undefined && normalisePath(path) === currentPath,
     });
     current = {};
   };
@@ -108,9 +115,22 @@ export function parseWorktreeList(stdout: string, cwd?: string): Worktree[] {
   return worktrees;
 }
 
-/** Every working tree of the repository at `cwd`, including `cwd` itself. */
+/**
+ * Every working tree of the repository at `cwd`, including `cwd` itself.
+ *
+ * Which one is current is decided by asking git, not by comparing the path the
+ * editor gave us: git reports resolved paths, so a repository opened at
+ * `/tmp/x` appears as `/private/tmp/x` on macOS and a string compare fails —
+ * leaving the working tree you are in looking like somebody else's, badged W
+ * and tinted. Any symlinked path does this, not only /tmp.
+ */
 export async function listWorktrees(cwd: string): Promise<Worktree[]> {
-  return parseWorktreeList(await gitQuery(["worktree", "list", "--porcelain"], cwd), cwd);
+  const [porcelain, topLevel] = await Promise.all([
+    gitQuery(["worktree", "list", "--porcelain"], cwd),
+    gitQueryTrimmed(["rev-parse", "--show-toplevel"], cwd),
+  ]);
+  // A bare repository has no top level; fall back rather than mark nothing.
+  return parseWorktreeList(porcelain, topLevel || cwd);
 }
 
 /**
@@ -153,6 +173,11 @@ export function worktreeDirName(branch: string): string {
     .replace(UNSAFE_IN_DIR_NAME, "-")
     .replace(/-{2,}/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+/** One spelling of a path, so two of them compare equal. */
+function normalisePath(value: string): string {
+  return value.replace(/\/+$/, "");
 }
 
 /** Join two path fragments without needing node:path in this module. */
