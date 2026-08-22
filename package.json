@@ -280,6 +280,7 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "visual-check": "node scripts/dev/visual-check.mjs",
+    "demo-repo": "node scripts/dev/make-demo-repo.mjs",
     "package": "npm run build && mkdir -p build && vsce package --out build/",
     "publish:vscode": "vsce publish --packagePath build/boomergit-*.vsix",
     "publish:openvsx": "ovsx publish build/boomergit-*.vsix",

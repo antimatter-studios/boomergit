@@ -52,10 +52,19 @@ export const COLOR = {
 
   /**
    * Whole-row tint for the same thing, when `worktrees.rowStyle` asks for it.
-   * Dark enough that the normal row colours stay readable on top — a tint, not
-   * a highlight.
+   * Bright enough to read as green rather than as a shadow, which the first
+   * attempt (#1b3a29) did not.
    */
-  worktreeRow: "#1b3a29",
+  worktreeRow: "#245c3d",
+
+  /**
+   * The date column on a tinted row.
+   *
+   * `date` is a mid grey, which lands at almost exactly the tint's luminance —
+   * 1.27:1, invisible. This keeps the column as quiet as it is on a normal row
+   * (3.26:1 here against 2.69:1 there) without letting it disappear.
+   */
+  dateOnWorktreeRow: "#8fae9d",
 
   /** A row picked for compare, and its marker in the overview ruler. */
   selectedRow: "#cc3333",

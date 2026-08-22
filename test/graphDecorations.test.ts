@@ -693,6 +693,54 @@ describe("line height", () => {
   });
 });
 
+describe("date colour on a tinted worktree row", () => {
+  const worktreeRef = { name: "feature", type: "worktree" as const };
+
+  function build(style: string, refs: { name: string; type: "worktree" | "branch" }[]) {
+    __state.configValues.set("boomergit.worktrees.rowStyle", style);
+    const commits = [commit("a".repeat(40), { refs })];
+    const built = setup(commits);
+    built.engine.apply(built.editor as never, built.rows, commits);
+    return built;
+  }
+
+  function dateColours() {
+    return __state.decorationTypes
+      .map((d) => d.options.color)
+      .filter((c) => c === COLOR.date || c === COLOR.dateOnWorktreeRow);
+  }
+
+  it("lightens the date on a tinted row, where the normal grey is invisible", () => {
+    const { editor } = build("background", [worktreeRef]);
+    const lightened = __state.decorationTypes.find(
+      (d) => d.options.color === COLOR.dateOnWorktreeRow
+    )!;
+    expect(editor.__decorations.get(lightened)).toHaveLength(1);
+  });
+
+  it("leaves the date grey when nothing tints the row", () => {
+    const { editor } = build("ring", [worktreeRef]);
+    const lightened = __state.decorationTypes.find(
+      (d) => d.options.color === COLOR.dateOnWorktreeRow
+    )!;
+    expect(editor.__decorations.get(lightened) ?? []).toHaveLength(0);
+    const grey = __state.decorationTypes.find((d) => d.options.color === COLOR.date)!;
+    expect(editor.__decorations.get(grey)).toHaveLength(1);
+  });
+
+  it("leaves an ordinary row's date grey even when tinting is on", () => {
+    const { editor } = build("background", [{ name: "main", type: "branch" }]);
+    const grey = __state.decorationTypes.find((d) => d.options.color === COLOR.date)!;
+    expect(editor.__decorations.get(grey)).toHaveLength(1);
+  });
+
+  it("uses one colour or the other for a date, never both", () => {
+    build("background", [worktreeRef]);
+    // Both decoration types exist; only one carries the range
+    expect(dateColours()).toHaveLength(2);
+  });
+});
+
 describe("worktree row style setting", () => {
   const worktreeRef = { name: "feature", type: "worktree" as const };
 

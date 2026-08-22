@@ -65,6 +65,8 @@ interface TextRanges {
   hash: vscode.DecorationOptions[];
   author: vscode.DecorationOptions[];
   date: vscode.DecorationOptions[];
+  /** Dates on tinted rows, which need a lighter colour to stay visible. */
+  dateOnTint: vscode.DecorationOptions[];
   /** The " X " type box at the head of every badge — same style for all. */
   sigil: vscode.DecorationOptions[];
   /** Badge name pills, grouped by the lane colour they take. */
@@ -189,7 +191,7 @@ export class GraphDecorationEngine {
     }
 
     this.markWorktreeRows(editor, commits, rowStyle);
-    this.applyTextColors(editor, commits, rows);
+    this.applyTextColors(editor, commits, rows, rowStyle);
   }
 
   /**
@@ -237,9 +239,14 @@ export class GraphDecorationEngine {
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
   }
 
-  private applyTextColors(editor: vscode.TextEditor, commits: Commit[], rows: GraphRow[]): void {
-    const ranges = this.collectRanges(editor, commits, rows);
-    this.paintRanges(editor, ranges);
+  private applyTextColors(
+    editor: vscode.TextEditor,
+    commits: Commit[],
+    rows: GraphRow[],
+    rowStyle: WorktreeRowStyle
+  ): void {
+    const tinted = rowStyle === "background" || rowStyle === "both";
+    this.paintRanges(editor, this.collectRanges(editor, commits, rows, tinted));
   }
 
   /**
@@ -251,12 +258,15 @@ export class GraphDecorationEngine {
   private collectRanges(
     editor: vscode.TextEditor,
     commits: Commit[],
-    rows: GraphRow[]
+    rows: GraphRow[],
+    /** True when worktree rows carry a background the date must read against. */
+    tintingWorktreeRows: boolean
   ): TextRanges {
     const ranges: TextRanges = {
       hash: [],
       author: [],
       date: [],
+      dateOnTint: [],
       sigil: [],
       nameByLaneColor: new Map(),
     };
@@ -276,7 +286,10 @@ export class GraphDecorationEngine {
       const dateMatch = text.match(/(\d{4}-\d{2}-\d{2})\s*$/);
       if (dateMatch) {
         const start = text.lastIndexOf(dateMatch[1]);
-        ranges.date.push({ range: new vscode.Range(i, start, i, start + 10) });
+        const onTint =
+          tintingWorktreeRows && commit.refs.some((ref) => ref.type === "worktree");
+        const range = { range: new vscode.Range(i, start, i, start + 10) };
+        (onTint ? ranges.dateOnTint : ranges.date).push(range);
       }
 
       const authorIdx = text.lastIndexOf(commit.author);
@@ -343,6 +356,7 @@ export class GraphDecorationEngine {
     this.paint(editor, ranges.hash, { color: COLOR.commitHash, fontWeight: "bold" });
     this.paint(editor, ranges.author, { color: COLOR.author });
     this.paint(editor, ranges.date, { color: COLOR.date });
+    this.paint(editor, ranges.dateOnTint, { color: COLOR.dateOnWorktreeRow });
 
     // The type sigil: white box, bold black letter, rounded on the left only
     // so it reads as one two-tone pill with the name that follows.
