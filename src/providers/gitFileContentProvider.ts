@@ -3,6 +3,14 @@ import { gitQuery } from "../git/exec.js";
 
 export const FILE_SCHEME = "boomergit-file";
 
+/**
+ * Ref meaning "nothing on this side" — a file that didn't exist yet, one that
+ * has been deleted, or the parent side of a root commit. Defined here because
+ * this is the module that resolves it; anything constructing a diff should
+ * import it rather than repeat the literal.
+ */
+export const EMPTY_REF = "empty";
+
 /** Build a URI with JSON-encoded query for resourceLabelFormatters */
 export function fileUri(filePath: string, ref: string, cwd: string, label: string): vscode.Uri {
   const query = JSON.stringify({ ref, cwd, label });
@@ -15,8 +23,7 @@ export class GitFileContentProvider implements vscode.TextDocumentContentProvide
     const ref = params.ref ?? "";
     const cwd = params.cwd ?? "";
 
-    // "empty" sentinel → blank content (added files, deleted files, root commits)
-    if (ref === "empty") return Promise.resolve("");
+    if (ref === EMPTY_REF) return Promise.resolve("");
 
     const filePath = uri.path.startsWith("/") ? uri.path.slice(1) : uri.path;
 

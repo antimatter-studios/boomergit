@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { GraphRow } from "./types.js";
+import { COLOR } from "../ui/theme.js";
 
 // Grid dimensions
 export const COL_WIDTH = 20;
@@ -9,7 +10,8 @@ export const DOT_RADIUS = 5;
 export const LINE_WIDTH = 2.5;
 const SHADOW_WIDTH = 5;
 const SHADOW_OPACITY = 0.75;
-const BG_COLOR = "#1e1e1e";
+/** Lines are haloed in the editor background so crossings read as overlaps. */
+const BG_COLOR = COLOR.editorBackground;
 
 export class SvgTileCache {
   private cacheDir: string;

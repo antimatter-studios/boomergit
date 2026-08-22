@@ -1,12 +1,6 @@
 import { shortHash } from "../git/format.js";
 import type { ChangedFile } from "../providers/changedFilesProvider.js";
-
-/**
- * The sentinel ref meaning "no content on this side" — used for a file that
- * didn't exist yet, one that's been deleted, and the parent side of a root
- * commit. The file content provider resolves it to a blank document.
- */
-export const EMPTY_REF = "empty";
+import { EMPTY_REF } from "../providers/gitFileContentProvider.js";
 
 export interface DiffTarget {
   leftRef: string;
