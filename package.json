@@ -193,6 +193,7 @@
     "watch": "node esbuild.mjs --watch",
     "lint": "tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "package": "npm run build && mkdir -p build && vsce package --out build/",
     "publish:vscode": "vsce publish --packagePath build/boomergit-*.vsix",
@@ -205,6 +206,7 @@
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.28.0",
     "ovsx": "^0.10.9",
