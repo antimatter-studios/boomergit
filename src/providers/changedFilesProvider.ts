@@ -22,11 +22,13 @@ export function parseNameStatus(stdout: string): ChangedFile[] {
     if (!line) continue;
     const parts = line.split("\t");
     const status = parts[0].charAt(0) as FileStatus;
-    if (status === "R" || status === "C") {
-      files.push({ status, path: parts[2], oldPath: parts[1] });
-    } else {
-      files.push({ status, path: parts[1] });
-    }
+    // A rename or copy carries two paths, old then new; everything else one.
+    // Skip a line missing the path it needs rather than building a file entry
+    // with an undefined path, which would throw when the tree is assembled.
+    const isMove = status === "R" || status === "C";
+    const filePath = isMove ? parts[2] : parts[1];
+    if (!filePath) continue;
+    files.push(isMove ? { status, path: filePath, oldPath: parts[1] } : { status, path: filePath });
   }
   return files;
 }
@@ -41,6 +43,22 @@ interface FileTreeNode {
 /** An empty tree root, used both initially and on clear. */
 function emptyTree(): FileTreeNode {
   return { name: "", path: "", children: new Map() };
+}
+
+/**
+ * Shown in place of the tree when building it throws.
+ *
+ * Returning an empty list here would be indistinguishable from a commit that
+ * genuinely changed nothing, which is the one reading a user must not be given
+ * when something has actually gone wrong.
+ */
+class TreeErrorItem extends vscode.TreeItem {
+  constructor(detail: string) {
+    super("Failed to list changed files", vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon("error", new vscode.ThemeColor("errorForeground"));
+    this.tooltip = detail;
+    this.contextValue = "changedFilesError";
+  }
 }
 
 class DirItem extends vscode.TreeItem {
@@ -174,8 +192,10 @@ export class ChangedFilesProvider implements vscode.TreeDataProvider<vscode.Tree
       }
       return [];
     } catch (err) {
+      // Surfaced in the tree as well as logged: the log isn't somewhere a user
+      // would think to look when the view says a commit changed nothing.
       console.error("[boomergit] getChildren error:", err);
-      return [];
+      return [new TreeErrorItem(err instanceof Error ? err.message : String(err))];
     }
   }
 

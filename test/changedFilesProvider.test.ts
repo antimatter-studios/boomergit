@@ -64,6 +64,21 @@ describe("parseNameStatus", () => {
   it("keeps paths containing spaces intact", () => {
     expect(parseNameStatus("M\tsrc/my file.ts")[0].path).toBe("src/my file.ts");
   });
+
+  it("skips a status line carrying no path", () => {
+    // Would otherwise yield path: undefined and throw when the tree is built
+    expect(parseNameStatus("M")).toEqual([]);
+    expect(parseNameStatus("M\t")).toEqual([]);
+  });
+
+  it("skips a rename missing its destination", () => {
+    expect(parseNameStatus("R100\told.ts")).toEqual([]);
+  });
+
+  it("keeps the good lines around a malformed one", () => {
+    const out = ["M\ta.ts", "M", "M\tb.ts"].join("\n");
+    expect(parseNameStatus(out).map((f) => f.path)).toEqual(["a.ts", "b.ts"]);
+  });
 });
 
 describe("buildFileTree", () => {
@@ -253,6 +268,35 @@ describe("ChangedFilesProvider", () => {
     await Promise.all([first, second]);
 
     expect(provider.getChildren().map((i) => i.label)).toEqual(["new.ts"]);
+  });
+
+  it("survives git returning a malformed status line", async () => {
+    gitReturns("M\nM\tgood.ts");
+    const provider = new ChangedFilesProvider();
+    await expect(provider.showCommit("abc", "p", false, "/repo")).resolves.toBeUndefined();
+    expect(provider.getChildren().map((i) => i.label)).toEqual(["good.ts"]);
+  });
+
+  it("surfaces a tree-building failure instead of showing an empty list", async () => {
+    gitReturns("M\tsrc/a.ts");
+    const provider = new ChangedFilesProvider();
+    await provider.showCommit("abc", "p", false, "/repo");
+
+    // Corrupt a directory node so listing its children throws
+    const dir = provider.getChildren()[0] as unknown as { node: unknown };
+    dir.node = { name: "src", path: "src", children: null };
+
+    const children = provider.getChildren(dir as never);
+    expect(children).toHaveLength(1);
+    expect(children[0].label).toBe("Failed to list changed files");
+    expect(children[0].contextValue).toBe("changedFilesError");
+  });
+
+  it("returns nothing for an element that is neither file nor directory", async () => {
+    gitReturns("M\ta.ts");
+    const provider = new ChangedFilesProvider();
+    await provider.showCommit("abc", "p", false, "/repo");
+    expect(provider.getChildren(new TreeItem("stray") as never)).toEqual([]);
   });
 
   it("returns the element unchanged from getTreeItem", () => {
