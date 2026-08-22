@@ -34,7 +34,7 @@ const TITLE = `${DISPLAY_NAME} - Git Graph`;
 const STATUS_BAR_PRIORITY = 100;
 
 /**
- * Hang a synthetic `worktree` ref on every commit another working tree has
+ * Hang a synthetic `worktree` ref on every commit a linked working tree has
  * checked out.
  *
  * `git log` cannot report this — nothing in its decorations says a branch is
@@ -42,14 +42,18 @@ const STATUS_BAR_PRIORITY = 100;
  * joined onto the graph here, by commit hash. Presenting them as refs means the
  * badge rendering, hit testing and menus all carry them without knowing.
  *
- * The current worktree is skipped: its row already gets the inverted
- * active-branch treatment, and a second marker saying "you are here" is noise.
- * The bare parent of a worktree set has no working tree, so it is skipped too.
+ * Only linked worktrees are marked. The main worktree is the repository itself,
+ * already described by its HEAD and branch badges, and the bare parent of a
+ * worktree set has no working tree at all.
+ *
+ * Notably this does *not* depend on which worktree you happen to be viewing
+ * from: a linked worktree is marked whether or not it is the one you have open,
+ * so the graph reads the same from anywhere in the repository.
  */
 function attachWorktreeRefs(commits: Commit[], worktrees: Worktree[]): void {
   const byHash = new Map<string, Worktree[]>();
   for (const worktree of worktrees) {
-    if (worktree.isCurrent || worktree.bare || !worktree.head) continue;
+    if (worktree.isMain || worktree.bare || !worktree.head) continue;
     const existing = byHash.get(worktree.head) ?? [];
     existing.push(worktree);
     byHash.set(worktree.head, existing);

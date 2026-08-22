@@ -32,6 +32,8 @@ class WorktreeItem extends vscode.TreeItem {
 function describe(worktree: Worktree): string {
   const parts: string[] = [];
   if (worktree.isCurrent) parts.push("current");
+  // Named so the list explains why this one carries no badge in the graph
+  if (worktree.isMain) parts.push("main worktree");
   if (worktree.bare) parts.push("bare");
   if (worktree.detached) parts.push("detached");
   if (worktree.locked) parts.push("locked");

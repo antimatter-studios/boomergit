@@ -156,6 +156,33 @@ describe("parseWorktreeList", () => {
   });
 });
 
+describe("identifying the main worktree", () => {
+  it("treats the first record as the main worktree", () => {
+    // git lists it first from whichever worktree you ask
+    const out = porcelain(
+      ["worktree /repo", "HEAD a", "branch refs/heads/main"],
+      ["worktree /wt-a", "HEAD b", "branch refs/heads/a"],
+      ["worktree /wt-b", "HEAD c", "branch refs/heads/b"]
+    );
+    expect(parseWorktreeList(out).map((w) => w.isMain)).toEqual([true, false, false]);
+  });
+
+  it("marks main independently of which worktree is current", () => {
+    const out = porcelain(
+      ["worktree /repo", "HEAD a", "branch refs/heads/main"],
+      ["worktree /wt-a", "HEAD b", "branch refs/heads/a"]
+    );
+    const parsed = parseWorktreeList(out, "/wt-a");
+    expect(parsed.map((w) => w.isMain)).toEqual([true, false]);
+    expect(parsed.map((w) => w.isCurrent)).toEqual([false, true]);
+  });
+
+  it("treats a bare parent as main, since it is listed first", () => {
+    const out = porcelain(["worktree /bare", "bare"], ["worktree /wt", "HEAD b", "detached"]);
+    expect(parseWorktreeList(out).map((w) => w.isMain)).toEqual([true, false]);
+  });
+});
+
 describe("identifying the current worktree", () => {
   it("matches on the path git reports, ignoring trailing slashes", () => {
     const out = porcelain(

@@ -29,6 +29,15 @@ export interface Worktree {
   prunableReason?: string;
   /** True for the worktree the editor currently has open. */
   isCurrent: boolean;
+  /**
+   * True for the repository's own checkout — git's "main worktree", as opposed
+   * to the "linked worktrees" that `git worktree add` creates.
+   *
+   * It isn't a worktree in the sense that matters to the graph: it's the
+   * repository, already described by its HEAD and branch badges. Only linked
+   * worktrees are worth marking as checked out elsewhere.
+   */
+  isMain: boolean;
 }
 
 /** What to show for a worktree: its branch, or its directory when detached. */
@@ -58,6 +67,9 @@ export function parseWorktreeList(
   const flush = () => {
     if (!current.path) return;
     const path = current.path;
+    // git lists the main worktree first, from whichever worktree you ask —
+    // verified against 2.50.1 from the main tree and from two linked ones.
+    const isMain = worktrees.length === 0;
     worktrees.push({
       path,
       name: path.split("/").filter(Boolean).pop() ?? path,
@@ -70,6 +82,7 @@ export function parseWorktreeList(
       prunable: current.prunable ?? false,
       prunableReason: current.prunableReason,
       isCurrent: currentPath !== undefined && normalisePath(path) === currentPath,
+      isMain,
     });
     current = {};
   };

@@ -795,16 +795,29 @@ describe("worktrees", () => {
     expect(provider.provideTextDocumentContent(Uri.parse(GRAPH_URI))).toContain(" W second ");
   });
 
-  it("does not badge the worktree the editor already has open", async () => {
+  it("never badges the main worktree, which is the repository itself", async () => {
     defaultRepo({ worktree: WORKTREES });
     workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
     await openGraph();
     const provider = __state.registeredContentProviders.get("boomergit") as {
       provideTextDocumentContent(u: Uri): string;
     };
-    // /repo is current, so its branch gets no W badge — the inverted active
-    // row already says "you are here"
     expect(provider.provideTextDocumentContent(Uri.parse(GRAPH_URI))).not.toContain(" W main ");
+  });
+
+  it("badges a linked worktree even when it is the one being viewed", async () => {
+    // The case that separates "main worktree" from "current worktree": viewed
+    // from the linked tree, it is still a linked tree and still marked, while
+    // the main worktree stays unmarked. The graph reads the same from anywhere.
+    defaultRepo({ worktree: WORKTREES, "rev-parse:toplevel": "/wt-second\n" });
+    workspace.workspaceFolders = [{ uri: Uri.file("/wt-second") }];
+    await openGraph();
+    const provider = __state.registeredContentProviders.get("boomergit") as {
+      provideTextDocumentContent(u: Uri): string;
+    };
+    const text = provider.provideTextDocumentContent(Uri.parse(GRAPH_URI));
+    expect(text).toContain(" W second ");
+    expect(text).not.toContain(" W main ");
   });
 
   it("refuses checkout of a branch another worktree holds", async () => {
