@@ -143,6 +143,17 @@ export class Uri {
     if (this.fragment) out += `#${this.fragment}`;
     return out;
   }
+
+  /** Part of the real Uri's shape; present so the double is assignable to it. */
+  toJSON(): unknown {
+    return {
+      scheme: this.scheme,
+      authority: this.authority,
+      path: this.path,
+      query: this.query,
+      fragment: this.fragment,
+    };
+  }
 }
 
 export class EventEmitter<T> {
