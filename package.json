@@ -1,7 +1,7 @@
 {
   "name": "boomergit",
   "displayName": "BoomerGit",
-  "description": "Old man shakes stick at crap git integrations — native git graph visualization",
+  "description": "Old man shakes stick at crap git integrations \u2014 native git graph visualization",
   "version": "0.4.0",
   "publisher": "ChristopherThomas",
   "icon": "resources/old_man_yells_at_git_256.png",
@@ -40,6 +40,11 @@
     },
     "views": {
       "boomergit-sidebar": [
+        {
+          "id": "boomergit.worktrees",
+          "name": "Worktrees",
+          "when": "boomergit:graphOpen"
+        },
         {
           "id": "boomergit.welcome",
           "name": "BoomerGit",
@@ -107,6 +112,18 @@
       {
         "command": "boomergit.toggleAutoRefresh",
         "title": "BoomerGit: Toggle Auto-Refresh"
+      },
+      {
+        "command": "boomergit.revealWorktree",
+        "title": "Reveal Worktree Commit"
+      },
+      {
+        "command": "boomergit.openWorktree",
+        "title": "Open Worktree in New Window"
+      },
+      {
+        "command": "boomergit.copyWorktreePath",
+        "title": "Copy Worktree Path"
       }
     ],
     "menus": {
@@ -145,6 +162,30 @@
         {
           "command": "boomergit.selectDown",
           "when": "false"
+        },
+        {
+          "command": "boomergit.revealWorktree",
+          "when": "false"
+        },
+        {
+          "command": "boomergit.openWorktree",
+          "when": "false"
+        },
+        {
+          "command": "boomergit.copyWorktreePath",
+          "when": "false"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "boomergit.openWorktree",
+          "when": "view == boomergit.worktrees && viewItem == worktree",
+          "group": "navigation"
+        },
+        {
+          "command": "boomergit.copyWorktreePath",
+          "when": "view == boomergit.worktrees",
+          "group": "1_copy"
         }
       ]
     },

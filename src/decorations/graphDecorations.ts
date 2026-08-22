@@ -3,7 +3,7 @@ import { refBadgeText, REF_SIGIL_WIDTH, type Commit, type Ref } from "../git/typ
 import { SHORT_HASH_LEN } from "../git/format.js";
 import type { GraphRow } from "../graph/types.js";
 import { SvgTileCache, COL_WIDTH } from "../graph/svgTileGen.js";
-import { COLOR } from "../ui/theme.js";
+import { COLOR, REF_BADGE_COLOR } from "../ui/theme.js";
 import { TIMING } from "../ui/timings.js";
 
 export interface RefHit {
@@ -97,6 +97,35 @@ export class GraphDecorationEngine {
     this.svgCache.clear();
   }
 
+  /**
+   * Paint rows checked out in another working tree.
+   *
+   * A whole-line tint rather than a badge alone, because "this commit is
+   * checked out somewhere else" is a property of the row, and the thing you
+   * want to spot while scanning is which rows are live elsewhere.
+   *
+   * The current worktree is deliberately excluded: its row already carries the
+   * inverted active-branch treatment, which is a stronger signal, and tinting
+   * it green would replace that with a weaker one.
+   */
+  private paintWorktreeRows(editor: vscode.TextEditor, commits: Commit[]): void {
+    const rows = commits
+      .map((commit, line) =>
+        commit.refs.some((ref) => ref.type === "worktree")
+          ? { range: new vscode.Range(line, 0, line, 0) }
+          : undefined
+      )
+      .filter((r): r is vscode.DecorationOptions => r !== undefined);
+    if (rows.length === 0) return;
+
+    this.paint(editor, rows, {
+      backgroundColor: COLOR.worktreeRow,
+      isWholeLine: true,
+      overviewRulerColor: REF_BADGE_COLOR.worktree,
+      overviewRulerLane: vscode.OverviewRulerLane.Left,
+    });
+  }
+
   apply(editor: vscode.TextEditor, rows: GraphRow[], commits: Commit[], currentBranch?: string): void {
     this.clearDecorations();
     this.commits = commits;
@@ -131,6 +160,9 @@ export class GraphDecorationEngine {
       this.decorationTypes.push(decorationType);
     }
 
+    // Before the text colours so the tint sits under the badges, and after the
+    // tiles so the active row's inverted styling still wins on its own row.
+    this.paintWorktreeRows(editor, commits);
     this.applyTextColors(editor, commits, rows);
   }
 

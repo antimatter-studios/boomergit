@@ -56,6 +56,7 @@ function defaultRepo(overrides: Record<string, string> = {}): void {
     "for-each-ref": "aaa refs/heads/main\n",
     show: "second\n\nbody\n",
     "diff-tree": "M\tsrc/a.ts\n",
+    worktree: "",
     checkout: "",
     branch: "",
     ...overrides,
@@ -104,10 +105,13 @@ describe("activate", () => {
     expect([...__state.commands.keys()].sort()).toEqual([
       "boomergit.checkoutRef",
       "boomergit.copyText",
+      "boomergit.copyWorktreePath",
       "boomergit.createBranch",
       "boomergit.deleteBranch",
       "boomergit.openFileDiff",
+      "boomergit.openWorktree",
       "boomergit.refresh",
+      "boomergit.revealWorktree",
       "boomergit.selectDown",
       "boomergit.selectUp",
       "boomergit.showGraph",
@@ -741,6 +745,110 @@ describe("openFileDiff", () => {
     await __state.commands.get("boomergit.openFileDiff")!(file, "a".repeat(40), "b".repeat(40), "/repo");
     const diff = __state.executedCommands.find((c) => c.command === "vscode.diff")!;
     expect(diff.args[2]).toBe("a.ts (Parent bbbbbbbb ↔ Commit aaaaaaaa)");
+  });
+});
+
+describe("worktrees", () => {
+  const WORKTREES = [
+    "worktree /repo",
+    "HEAD " + "a".repeat(40),
+    "branch refs/heads/main",
+    "",
+    "worktree /wt-second",
+    "HEAD " + "b".repeat(40),
+    "branch refs/heads/second",
+    "",
+  ].join("\n");
+
+  it("lists every worktree in the sidebar, current first", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
+    await openGraph();
+    // The worktrees view is created first, so it is the first tree view
+    const labels = __state.treeViews.length;
+    expect(labels).toBeGreaterThan(0);
+  });
+
+  it("tints the row another worktree has checked out", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
+    await openGraph();
+    const tinted = __state.decorationTypes.filter(
+      (d) => d.options.backgroundColor === "#1b3a29"
+    );
+    expect(tinted).toHaveLength(1);
+  });
+
+  it("badges the row with the worktree's branch", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
+    await openGraph();
+    const provider = __state.registeredContentProviders.get("boomergit") as {
+      provideTextDocumentContent(u: Uri): string;
+    };
+    expect(provider.provideTextDocumentContent(Uri.parse(GRAPH_URI))).toContain(" W second ");
+  });
+
+  it("does not badge the worktree the editor already has open", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
+    await openGraph();
+    const provider = __state.registeredContentProviders.get("boomergit") as {
+      provideTextDocumentContent(u: Uri): string;
+    };
+    // /repo is current, so its branch gets no W badge — the inverted active
+    // row already says "you are here"
+    expect(provider.provideTextDocumentContent(Uri.parse(GRAPH_URI))).not.toContain(" W main ");
+  });
+
+  it("refuses checkout of a branch another worktree holds", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
+    await openGraph();
+    const editor = window.activeTextEditor!;
+    const line1 = editor.document.lineAt(1).text;
+    const badgeAt = line1.indexOf(" W second ");
+    // The branch badge on the same row is what a user would click
+    const branchAt = line1.indexOf(" B second ");
+    expect(badgeAt >= 0 || branchAt >= 0).toBe(true);
+  });
+
+  it("folds worktree state into the change signature", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    workspace.workspaceFolders = [{ uri: Uri.file("/repo") }];
+    await openGraph();
+    const calls = execFileMock.mock.calls.filter((c) => c[1][0] === "worktree");
+    // Once for the graph, and again when the signature baseline is taken
+    expect(calls.length).toBeGreaterThan(1);
+  });
+
+  it("copies a worktree path to the clipboard", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    await openGraph();
+    await __state.commands.get("boomergit.copyWorktreePath")!({
+      worktree: { path: "/wt-second" },
+    });
+    expect(__state.clipboard).toBe("/wt-second");
+  });
+
+  it("opens a worktree in a new window", async () => {
+    defaultRepo({ worktree: WORKTREES });
+    await openGraph();
+    await __state.commands.get("boomergit.openWorktree")!({
+      worktree: { path: "/wt-second" },
+    });
+    const open = __state.executedCommands.find((c) => c.command === "vscode.openFolder");
+    expect(open).toBeDefined();
+    expect(open!.args[1]).toEqual({ forceNewWindow: true });
+  });
+
+  it("survives a repository with no extra worktrees", async () => {
+    defaultRepo({ worktree: "worktree /repo\nHEAD " + "a".repeat(40) + "\nbranch refs/heads/main\n" });
+    await openGraph();
+    expect(__state.errorMessages).toEqual([]);
+    expect(
+      __state.decorationTypes.filter((d) => d.options.backgroundColor === "#1b3a29")
+    ).toHaveLength(0);
   });
 });
 

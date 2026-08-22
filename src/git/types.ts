@@ -21,7 +21,13 @@ export type RefType =
   | "stash" // refs/stash
   | "note" // refs/notes/*
   | "pr" // refs/pull/*, refs/merge-requests/*, refs/pull-requests/*, refs/changes/*
-  | "other"; // refs/bisect/*, refs/replace/*, refs/original/*, refs/worktree/*, …
+  | "other" // refs/bisect/*, refs/replace/*, refs/original/*, refs/worktree/*, …
+  /**
+   * Another working tree has this commit checked out. Not a ref git reports —
+   * `git log` has no idea worktrees exist — but it behaves like one everywhere
+   * the UI is concerned, so it rides the same badge machinery.
+   */
+  | "worktree";
 
 export interface Ref {
   name: string;
@@ -38,6 +44,7 @@ export const REF_SIGIL: Record<RefType, string> = {
   note: "N",
   pr: "P",
   other: "?",
+  worktree: "W",
 };
 
 /** Human-readable type name, for the sidebar. */
@@ -50,6 +57,7 @@ export const REF_LABEL: Record<RefType, string> = {
   note: "Note",
   pr: "Pull Request",
   other: "Ref",
+  worktree: "Worktree",
 };
 
 /** Characters the sigil box occupies at the start of a badge: " X ". */

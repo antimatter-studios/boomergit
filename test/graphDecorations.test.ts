@@ -352,6 +352,76 @@ describe("ref badge decorations", () => {
   });
 });
 
+describe("worktree rows", () => {
+  it("tints the whole row of a commit checked out in another worktree", () => {
+    const commits = [
+      commit("a".repeat(40), { refs: [{ name: "feature", type: "worktree" }] }),
+      commit("b".repeat(40)),
+    ];
+    const { engine, editor, rows } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+
+    const tinted = __state.decorationTypes.filter(
+      (d) => d.options.backgroundColor === COLOR.worktreeRow
+    );
+    expect(tinted).toHaveLength(1);
+    expect(tinted[0].options.isWholeLine).toBe(true);
+    // Only the worktree row, not its neighbour
+    expect(editor.__decorations.get(tinted[0])).toHaveLength(1);
+  });
+
+  it("marks worktree rows in the overview ruler so they're findable when scrolled away", () => {
+    const commits = [commit("a".repeat(40), { refs: [{ name: "feature", type: "worktree" }] })];
+    const { engine, editor, rows } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+    const tinted = __state.decorationTypes.find(
+      (d) => d.options.backgroundColor === COLOR.worktreeRow
+    )!;
+    expect(tinted.options.overviewRulerColor).toBeTruthy();
+  });
+
+  it("tints nothing when no commit is checked out elsewhere", () => {
+    const commits = [commit("a".repeat(40), { refs: [{ name: "main", type: "branch" }] })];
+    const { engine, editor, rows } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+    expect(
+      __state.decorationTypes.filter((d) => d.options.backgroundColor === COLOR.worktreeRow)
+    ).toHaveLength(0);
+  });
+
+  it("tints every row that has a worktree, not just the first", () => {
+    const commits = [
+      commit("a".repeat(40), { refs: [{ name: "feature", type: "worktree" }] }),
+      commit("b".repeat(40)),
+      commit("c".repeat(40), { refs: [{ name: "other", type: "worktree" }] }),
+    ];
+    const { engine, editor, rows } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+    const tinted = __state.decorationTypes.find(
+      (d) => d.options.backgroundColor === COLOR.worktreeRow
+    )!;
+    expect(editor.__decorations.get(tinted)).toHaveLength(2);
+  });
+
+  it("gives a worktree its W badge alongside the branch badge", () => {
+    const commits = [
+      commit("a".repeat(40), {
+        refs: [
+          { name: "feature", type: "branch" },
+          { name: "feature", type: "worktree" },
+        ],
+      }),
+    ];
+    const { engine, editor, rows, text } = setup(commits);
+    engine.apply(editor as never, rows, commits);
+    expect(text).toContain(" B feature ");
+    expect(text).toContain(" W feature ");
+    // And the W badge hit-tests back to the worktree ref, not the branch
+    const hit = engine.getRefAt(new Position(0, text.indexOf(" W feature ") + 4) as never);
+    expect(hit?.ref.type).toBe("worktree");
+  });
+});
+
 describe("commit lookup", () => {
   it("maps a line to its commit", () => {
     const commits = [commit("a".repeat(40)), commit("b".repeat(40))];

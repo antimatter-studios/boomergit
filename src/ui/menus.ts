@@ -59,26 +59,42 @@ function copyHashEntry(commit: Commit): string {
  *
  * Which entries appear depends on what the ref actually supports: see
  * isCheckoutable for what can be checked out, and only a local branch can be
- * deleted — never the one currently checked out.
+ * deleted — never the one currently checked out, and never one another working
+ * tree is holding, since git refuses both outright.
  */
-export function buildBadgeMenu(ref: Ref, commit: Commit, currentBranch?: string): string {
+export function buildBadgeMenu(
+  ref: Ref,
+  commit: Commit,
+  currentBranch?: string,
+  /** Name of the other working tree holding this branch, if one does. */
+  heldByWorktree?: string
+): string {
   const entries: string[] = [];
 
   if (isCheckoutable(ref)) {
+    // `git checkout` fails outright while another working tree holds the
+    // branch, so say so rather than offering an action that cannot work.
     entries.push(
-      commandLink("$(git-branch)&ensp;Checkout Branch", "boomergit.checkoutRef", [
-        ref.name,
-        ref.type,
-      ])
+      heldByWorktree
+        ? disabled(`$(git-branch)&ensp;Checked out in worktree ${heldByWorktree}`)
+        : commandLink("$(git-branch)&ensp;Checkout Branch", "boomergit.checkoutRef", [
+            ref.name,
+            ref.type,
+          ])
     );
   }
 
   if (ref.type === "branch") {
-    entries.push(
-      ref.name === currentBranch
-        ? disabled("$(trash)&ensp;Cannot delete current branch")
-        : commandLink("$(trash)&ensp;Delete Branch", "boomergit.deleteBranch", [ref.name])
-    );
+    if (ref.name === currentBranch) {
+      entries.push(disabled("$(trash)&ensp;Cannot delete current branch"));
+    } else if (heldByWorktree) {
+      // Same refusal from git: a branch in use by a worktree cannot be deleted.
+      entries.push(disabled(`$(trash)&ensp;In use by worktree ${heldByWorktree}`));
+    } else {
+      entries.push(
+        commandLink("$(trash)&ensp;Delete Branch", "boomergit.deleteBranch", [ref.name])
+      );
+    }
   }
 
   entries.push(

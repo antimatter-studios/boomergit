@@ -16,6 +16,13 @@ import { CommitInfoProvider } from "./providers/commitInfoProvider.js";
 import { ChangedFilesProvider } from "./providers/changedFilesProvider.js";
 import type { ChangedFile } from "./providers/changedFilesProvider.js";
 import { GitFileContentProvider, FILE_SCHEME, fileUri } from "./providers/gitFileContentProvider.js";
+import { WorktreesProvider } from "./providers/worktreesProvider.js";
+import {
+  listWorktrees,
+  worktreeHolding,
+  worktreeLabel,
+  type Worktree,
+} from "./git/worktrees.js";
 
 const SCHEME = "boomergit";
 const DISPLAY_NAME = "BoomerGit";
@@ -23,6 +30,36 @@ const TITLE = `${DISPLAY_NAME} - Git Graph`;
 
 /** Status bar priority — higher sits further left among right-aligned items. */
 const STATUS_BAR_PRIORITY = 100;
+
+/**
+ * Hang a synthetic `worktree` ref on every commit another working tree has
+ * checked out.
+ *
+ * `git log` cannot report this — nothing in its decorations says a branch is
+ * checked out elsewhere — so worktrees arrive as a separate query and are
+ * joined onto the graph here, by commit hash. Presenting them as refs means the
+ * badge rendering, hit testing and menus all carry them without knowing.
+ *
+ * The current worktree is skipped: its row already gets the inverted
+ * active-branch treatment, and a second marker saying "you are here" is noise.
+ * The bare parent of a worktree set has no working tree, so it is skipped too.
+ */
+function attachWorktreeRefs(commits: Commit[], worktrees: Worktree[]): void {
+  const byHash = new Map<string, Worktree[]>();
+  for (const worktree of worktrees) {
+    if (worktree.isCurrent || worktree.bare || !worktree.head) continue;
+    const existing = byHash.get(worktree.head) ?? [];
+    existing.push(worktree);
+    byHash.set(worktree.head, existing);
+  }
+  if (byHash.size === 0) return;
+
+  for (const commit of commits) {
+    for (const worktree of byHash.get(commit.hash) ?? []) {
+      commit.refs.push({ name: worktreeLabel(worktree), type: "worktree" });
+    }
+  }
+}
 
 export function activate(context: vscode.ExtensionContext) {
   const graphProvider = new GitGraphProvider();
@@ -62,6 +99,11 @@ export function activate(context: vscode.ExtensionContext) {
   const commitInfoProvider = new CommitInfoProvider(() => maybeReopenGraph(true));
   const commitInfoReg = vscode.window.registerWebviewViewProvider("boomergit.commitInfo", commitInfoProvider);
 
+  const worktreesProvider = new WorktreesProvider();
+  const worktreesView = vscode.window.createTreeView("boomergit.worktrees", {
+    treeDataProvider: worktreesProvider,
+  });
+
   const changedFilesProvider = new ChangedFilesProvider();
   const changedFilesView = vscode.window.createTreeView("boomergit.changedFiles", {
     treeDataProvider: changedFilesProvider,
@@ -92,12 +134,14 @@ export function activate(context: vscode.ExtensionContext) {
   // views that are visible in that state — this is what lets the sidebar icon
   // reopen the graph after the editor tab was closed.
   changedFilesView.onDidChangeVisibility((e) => maybeReopenGraph(e.visible));
+  worktreesView.onDidChangeVisibility((e) => maybeReopenGraph(e.visible));
 
   let decorationEngine: GraphDecorationEngine | undefined;
   let workspaceCwd: string | undefined;
   let currentBranch: string | undefined;
   let lastRows: GraphRow[] | undefined;
   let lastCommits: Commit[] | undefined;
+  let worktrees: Worktree[] = [];
   // Left-click → toggle hover menu; Cmd-click → select rows for compare
   let lastHoverKey: string | undefined;
   let hoverTriggeredByClick = false;
@@ -244,7 +288,18 @@ export function activate(context: vscode.ExtensionContext) {
         md.supportThemeIcons = true;
 
         if (refHit) {
-          md.appendMarkdown(buildBadgeMenu(refHit.ref, commit, currentBranch));
+          const holder =
+            refHit.ref.type === "branch" || refHit.ref.type === "remote"
+              ? worktreeHolding(worktrees, refHit.ref.name)
+              : undefined;
+          md.appendMarkdown(
+            buildBadgeMenu(
+              refHit.ref,
+              commit,
+              currentBranch,
+              holder ? worktreeLabel(holder) : undefined
+            )
+          );
           return new vscode.Hover(md, refHit.range);
         }
         md.appendMarkdown(buildRowMenu(commit));
@@ -271,6 +326,8 @@ export function activate(context: vscode.ExtensionContext) {
     lastRows = undefined;
     lastCommits = undefined;
     lastHoverKey = undefined;
+    worktrees = [];
+    worktreesProvider.clear();
     commitInfoProvider.clear();
     changedFilesProvider.clear();
     updateStatusBar();
@@ -302,8 +359,15 @@ export function activate(context: vscode.ExtensionContext) {
 
       currentBranch = await gitQueryTrimmed(["rev-parse", "--abbrev-ref", "HEAD"], workspaceCwd);
 
-      const commits = await parseGitLog(workspaceCwd);
+      const [commits, allWorktrees] = await Promise.all([
+        parseGitLog(workspaceCwd),
+        listWorktrees(workspaceCwd),
+      ]);
       if (commits.length === 0) return;
+
+      worktrees = allWorktrees;
+      worktreesProvider.setWorktrees(allWorktrees);
+      attachWorktreeRefs(commits, allWorktrees);
 
       const rows = computeGraphLayout(commits);
 
@@ -465,6 +529,56 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  /** Select and scroll to the row a worktree's HEAD sits on. */
+  const revealWorktreeCmd = vscode.commands.registerCommand(
+    "boomergit.revealWorktree",
+    async (head: string) => {
+      if (!decorationEngine || !lastCommits) return;
+      const line = lastCommits.findIndex((c) => c.hash === head);
+      if (line < 0) {
+        vscode.window.showInformationMessage(
+          `That worktree's commit isn't in the graph (${head.slice(0, 8)}).`
+        );
+        return;
+      }
+      const editor = vscode.window.visibleTextEditors.find(
+        (e) => e.document.uri.scheme === SCHEME
+      );
+      if (!editor) return;
+      decorationEngine.navigateTo(editor, line);
+      const commit = decorationEngine.getCommitAt(line);
+      if (commit) showSidebar(commit);
+      editor.revealRange(
+        new vscode.Range(line, 0, line, 0),
+        vscode.TextEditorRevealType.InCenterIfOutsideViewport
+      );
+    }
+  );
+
+  const openWorktreeCmd = vscode.commands.registerCommand(
+    "boomergit.openWorktree",
+    async (item?: { worktree?: Worktree }) => {
+      const worktree = item?.worktree;
+      if (!worktree) return;
+      // A new window, because the graph is built around a single root folder.
+      await vscode.commands.executeCommand(
+        "vscode.openFolder",
+        vscode.Uri.file(worktree.path),
+        { forceNewWindow: true }
+      );
+    }
+  );
+
+  const copyWorktreePathCmd = vscode.commands.registerCommand(
+    "boomergit.copyWorktreePath",
+    async (item?: { worktree?: Worktree }) => {
+      const path = item?.worktree?.path;
+      if (!path) return;
+      await vscode.env.clipboard.writeText(path);
+      vscode.window.showInformationMessage(`Copied: ${path}`);
+    }
+  );
+
   const copyTextCmd = vscode.commands.registerCommand(
     "boomergit.copyText",
     async (text: string, message: string) => {
@@ -545,11 +659,15 @@ export function activate(context: vscode.ExtensionContext) {
   async function getRefSignature(): Promise<string> {
     if (!workspaceCwd) return "";
     const cwd = workspaceCwd;
-    const [refs, head] = await Promise.all([
+    // Worktrees are in the signature because their HEADs are per-worktree and
+    // appear in neither for-each-ref nor our own rev-parse — without this, a
+    // checkout in another worktree would never refresh the graph or the list.
+    const [refs, head, trees] = await Promise.all([
       gitQuery(["for-each-ref", "--format=%(objectname) %(refname)"], cwd),
       gitQuery(["rev-parse", "HEAD"], cwd),
+      gitQuery(["worktree", "list", "--porcelain"], cwd),
     ]);
-    return refs + head;
+    return refs + head + trees;
   }
 
   async function maybeAutoRefresh(): Promise<void> {
@@ -633,8 +751,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     providerReg, fileProviderReg, sidebarView, showGraphCmd, checkoutRefCmd, deleteBranchCmd, createBranchCmd, copyTextCmd, hoverProvider, selectionWatcher,
-    commitInfoReg, changedFilesView, selectUpCmd, selectDownCmd, openFileDiffCmd, visibleEditorsWatcher, tabCloseWatcher,
+    commitInfoReg, changedFilesView, worktreesView, selectUpCmd, selectDownCmd, openFileDiffCmd, visibleEditorsWatcher, tabCloseWatcher,
     refreshCmd, toggleAutoRefreshCmd, configWatcher, statusBar,
+    revealWorktreeCmd, openWorktreeCmd, copyWorktreePathCmd,
     { dispose: () => { if (autoRefreshTimer) clearInterval(autoRefreshTimer); gitStateSub?.dispose(); openRepoSub?.dispose(); decorationEngine?.dispose(); } },
   );
 }

@@ -43,6 +43,12 @@ export const COLOR = {
   /** Outline drawn around a ref badge while the pointer is over it. */
   badgeHighlight: "#ff3333",
 
+  /**
+   * Rows checked out in another working tree. Dark enough that the normal row
+   * colours stay readable on top of it — it is a tint, not a highlight.
+   */
+  worktreeRow: "#1b3a29",
+
   /** A row picked for compare, and its marker in the overview ruler. */
   selectedRow: "#cc3333",
   selectedRowMarker: "#5a9bf6",
@@ -70,4 +76,5 @@ export const REF_BADGE_COLOR: Record<RefType, string> = {
   note: "#b5cea8",
   pr: "#569cd6",
   other: "#888888",
+  worktree: "#73c991",
 };
