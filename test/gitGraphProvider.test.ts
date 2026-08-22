@@ -19,7 +19,9 @@ function commit(over: Partial<Commit> = {}): Commit {
 }
 
 describe("GitGraphProvider", () => {
-  beforeEach(() => __reset());
+  beforeEach(() => {
+    __reset();
+  });
 
   it("renders nothing when there are no commits", () => {
     const provider = new GitGraphProvider();

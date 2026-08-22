@@ -1,12 +1,14 @@
 import { defineConfig } from "vitest/config";
 import * as path from "node:path";
 
+const here = import.meta.dirname;
+
 export default defineConfig({
   resolve: {
     alias: {
       // The real `vscode` module only exists inside the extension host, so
       // every module importing it is untestable without this redirect.
-      vscode: path.resolve(__dirname, "test/mocks/vscode.ts"),
+      vscode: path.resolve(here, "test/mocks/vscode.ts"),
     },
   },
   test: {

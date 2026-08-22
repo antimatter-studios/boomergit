@@ -55,6 +55,15 @@ async function loadGraphModules() {
   return mod;
 }
 
+/** Escape text interpolated into the generated page. */
+function esc(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 /** Shorthand: "hash parent1 parent2" lines into commit objects. */
 function graph(subject, spec) {
   return {
@@ -105,27 +114,27 @@ function renderScenario({ name, commits }, mod) {
       const commit = commits[i];
       return `      <div class="row">
         <img src="data:image/svg+xml;base64,${encoded}" alt="">
-        <span class="hash">${commit.hash.slice(0, 8)}</span>
+        <span class="hash">${esc(commit.hash.slice(0, 8))}</span>
         <span class="lane">lane ${row.commitCol}</span>
-        <span class="subject">${commit.subject}</span>
+        <span class="subject">${esc(commit.subject)}</span>
       </div>`;
     })
     .join("\n");
 
   return `    <section>
-      <h2>${name}</h2>
+      <h2>${esc(name)}</h2>
 ${lines}
     </section>`;
 }
 
-function html(sections) {
+function html(sections, rowHeight) {
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>BoomerGit visual check</title>
 <style>
   body { background: #1e1e1e; color: #ddd; font-family: ui-monospace, Menlo, monospace; padding: 24px; }
   h1 { font-size: 18px; font-weight: 600; }
   h2 { font-size: 13px; color: #9cdcfe; margin: 28px 0 8px; font-weight: 600; }
-  .row { display: flex; align-items: stretch; gap: 10px; height: ${Math.round(21 * SCALE)}px; }
+  .row { display: flex; align-items: stretch; gap: 10px; height: ${Math.round(rowHeight * SCALE)}px; }
   .row img { height: 100%; image-rendering: auto; }
   .hash { color: #F5A623; align-self: center; }
   .lane { color: #616161; align-self: center; width: 60px; }
@@ -162,7 +171,17 @@ let sections;
 
 if (repoPath) {
   const max = Number(process.argv[3] ?? 40);
-  const commits = (await mod.parseGitLog(path.resolve(repoPath))).slice(0, max);
+  let all;
+  try {
+    all = await mod.parseGitLog(path.resolve(repoPath));
+  } catch (err) {
+    // parseGitLog rejects on git failure, so without this a bad path prints a
+    // raw stack trace instead of saying what was wrong.
+    console.error(`Could not read git history from ${repoPath}:`);
+    console.error(`  ${err instanceof Error ? err.message : err}`);
+    process.exit(1);
+  }
+  const commits = all.slice(0, max);
   if (commits.length === 0) {
     console.error(`No commits found in ${repoPath}`);
     process.exit(1);
@@ -175,5 +194,5 @@ if (repoPath) {
 }
 
 fs.mkdirSync(path.dirname(OUT_HTML), { recursive: true });
-fs.writeFileSync(OUT_HTML, html(sections));
+fs.writeFileSync(OUT_HTML, html(sections, mod.ROW_HEIGHT));
 console.log(`\nWrote ${path.relative(ROOT, OUT_HTML)} — open it to inspect.`);
