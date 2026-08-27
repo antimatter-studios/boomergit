@@ -19,8 +19,13 @@ import tseslint from "typescript-eslint";
  * therefore fast; `tsc --noEmit` already covers what types can catch.
  */
 
-/** A catch block that discards the error is reported wherever it appears. */
-const localPlugin = {
+/**
+ * A catch block that discards the error is reported wherever it appears.
+ *
+ * Exported so the rule can be tested directly — a guard nothing checks is a
+ * guard you find out about when it has already stopped working.
+ */
+export const localPlugin = {
   rules: {
     "no-silent-catch": {
       meta: {
