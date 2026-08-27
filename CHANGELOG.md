@@ -11,6 +11,8 @@ Release notes.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-27
+
 ### Added
 - **Hover a ref badge to find out what it is.** Resting the pointer on a badge
   now shows what that kind of ref is, plus the full path git filed it under —
