@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseRefs, refBadgeText, REF_SIGIL_WIDTH } from "../src/git/types.js";
+import { parseRefs, refBadgeText, refSigil, REF_SIGIL, REF_SIGIL_WIDTH, SIGIL_CHARS } from "../src/git/types.js";
 import { parseLogOutput } from "../src/git/parser.js";
 
 describe("parseRefs", () => {
@@ -117,22 +117,58 @@ describe("parseLogOutput", () => {
 
 describe("parseRefs (--decorate=full)", () => {
   it("classifies each namespace from its full path", () => {
-    expect(parseRefs("refs/heads/main")).toEqual([{ name: "main", type: "branch" }]);
-    expect(parseRefs("refs/remotes/origin/main")).toEqual([{ name: "origin/main", type: "remote" }]);
-    expect(parseRefs("tag: refs/tags/v1.0")).toEqual([{ name: "v1.0", type: "tag" }]);
-    expect(parseRefs("refs/stash")).toEqual([{ name: "stash", type: "stash" }]);
-    expect(parseRefs("refs/notes/commits")).toEqual([{ name: "commits", type: "note" }]);
+    expect(parseRefs("refs/heads/main")).toEqual([
+      { name: "main", type: "branch", full: "refs/heads/main" },
+    ]);
+    expect(parseRefs("refs/remotes/origin/main")).toEqual([
+      { name: "origin/main", type: "remote", full: "refs/remotes/origin/main" },
+    ]);
+    expect(parseRefs("tag: refs/tags/v1.0")).toEqual([
+      { name: "v1.0", type: "tag", full: "refs/tags/v1.0" },
+    ]);
+    expect(parseRefs("refs/stash")).toEqual([
+      { name: "stash", type: "stash", full: "refs/stash" },
+    ]);
+    expect(parseRefs("refs/notes/commits")).toEqual([
+      { name: "commits", type: "note", full: "refs/notes/commits" },
+    ]);
+  });
+
+  it("keeps the path git reported, so the badge's stripped name stays unambiguous", () => {
+    // `fc/pr613` on a badge could be a branch of that name or refs/fc/pr613;
+    // the tooltip tells them apart, and only the full path can.
+    expect(parseRefs("refs/fc/pr613")[0].full).toBe("refs/fc/pr613");
+    expect(parseRefs("refs/heads/fc/pr613")[0].full).toBe("refs/heads/fc/pr613");
+  });
+
+  it("leaves the path off pseudo-refs that have none", () => {
+    // HEAD and 'replaced' are decorations, not paths under refs/.
+    expect(parseRefs("HEAD")[0].full).toBeUndefined();
+    expect(parseRefs("replaced")[0].full).toBeUndefined();
+    // Short-form decoration carries no namespace to record.
+    expect(parseRefs("tag: v1.0")[0].full).toBeUndefined();
+    expect(parseRefs("main")[0].full).toBeUndefined();
   });
 
   it("keeps slashed local branches as branches, not remotes", () => {
-    expect(parseRefs("refs/heads/chore/guard")).toEqual([{ name: "chore/guard", type: "branch" }]);
+    expect(parseRefs("refs/heads/chore/guard")).toEqual([
+      { name: "chore/guard", type: "branch", full: "refs/heads/chore/guard" },
+    ]);
   });
 
   it("names PR refs after their number across forges", () => {
-    expect(parseRefs("refs/pull/42/head")).toEqual([{ name: "#42", type: "pr" }]);
-    expect(parseRefs("refs/merge-requests/7/head")).toEqual([{ name: "#7", type: "pr" }]);
-    expect(parseRefs("refs/pull-requests/9/from")).toEqual([{ name: "#9", type: "pr" }]);
-    expect(parseRefs("refs/changes/34/1234/2")).toEqual([{ name: "#1234", type: "pr" }]);
+    expect(parseRefs("refs/pull/42/head")).toEqual([
+      { name: "#42", type: "pr", full: "refs/pull/42/head" },
+    ]);
+    expect(parseRefs("refs/merge-requests/7/head")).toEqual([
+      { name: "#7", type: "pr", full: "refs/merge-requests/7/head" },
+    ]);
+    expect(parseRefs("refs/pull-requests/9/from")).toEqual([
+      { name: "#9", type: "pr", full: "refs/pull-requests/9/from" },
+    ]);
+    expect(parseRefs("refs/changes/34/1234/2")).toEqual([
+      { name: "#1234", type: "pr", full: "refs/changes/34/1234/2" },
+    ]);
   });
 
   it("reads git's 'replaced' decoration as a ref, not a branch", () => {
@@ -143,26 +179,32 @@ describe("parseRefs (--decorate=full)", () => {
 
   it("still treats a real branch named 'replaced-thing' as a branch", () => {
     expect(parseRefs("refs/heads/replaced-thing")).toEqual([
-      { name: "replaced-thing", type: "branch" },
+      { name: "replaced-thing", type: "branch", full: "refs/heads/replaced-thing" },
     ]);
   });
 
   it("classifies bisect refs, which arrive as full paths", () => {
-    expect(parseRefs("refs/bisect/bad")).toEqual([{ name: "bisect/bad", type: "other" }]);
+    expect(parseRefs("refs/bisect/bad")).toEqual([
+      { name: "bisect/bad", type: "other", full: "refs/bisect/bad" },
+    ]);
     expect(parseRefs("refs/bisect/good-abc123")).toEqual([
-      { name: "bisect/good-abc123", type: "other" },
+      { name: "bisect/good-abc123", type: "other", full: "refs/bisect/good-abc123" },
     ]);
   });
 
   it("falls back to 'other' for unknown namespaces", () => {
-    expect(parseRefs("refs/bisect/bad")).toEqual([{ name: "bisect/bad", type: "other" }]);
-    expect(parseRefs("refs/replace/abc123")).toEqual([{ name: "replace/abc123", type: "other" }]);
+    expect(parseRefs("refs/bisect/bad")).toEqual([
+      { name: "bisect/bad", type: "other", full: "refs/bisect/bad" },
+    ]);
+    expect(parseRefs("refs/replace/abc123")).toEqual([
+      { name: "replace/abc123", type: "other", full: "refs/replace/abc123" },
+    ]);
   });
 
   it("splits 'HEAD -> refs/heads/main'", () => {
     expect(parseRefs("HEAD -> refs/heads/main")).toEqual([
       { name: "HEAD", type: "head" },
-      { name: "main", type: "branch" },
+      { name: "main", type: "branch", full: "refs/heads/main" },
     ]);
   });
 
@@ -176,7 +218,7 @@ describe("parseRefs (--decorate=full)", () => {
 describe("refBadgeText keeps the full ref name", () => {
   it("does not shorten even a long name", () => {
     const name = "origin/dependabot/github_actions/github-actions-bc056f11d8";
-    expect(refBadgeText({ name, type: "remote" })).toBe(` R ${name} `);
+    expect(refBadgeText({ name, type: "remote" })).toBe(` RB ${name} `);
   });
 
   it("keeps a pathologically long name intact", () => {
@@ -186,16 +228,47 @@ describe("refBadgeText keeps the full ref name", () => {
 });
 
 describe("refBadgeText", () => {
-  it("prefixes the type sigil in a fixed-width box", () => {
-    expect(refBadgeText({ name: "main", type: "branch" })).toBe(" B main ");
-    expect(refBadgeText({ name: "v1.0", type: "tag" })).toBe(" T v1.0 ");
-    expect(refBadgeText({ name: "origin/main", type: "remote" })).toBe(" R origin/main ");
-    expect(refBadgeText({ name: "HEAD", type: "head" })).toBe(" H HEAD ");
+  it("prefixes the type sigil in its own box", () => {
+    expect(refBadgeText({ name: "main", type: "branch" })).toBe(" LB main ");
+    expect(refBadgeText({ name: "v1.0", type: "tag" })).toBe(" T  v1.0 ");
+    expect(refBadgeText({ name: "origin/main", type: "remote" })).toBe(" RB origin/main ");
+    expect(refBadgeText({ name: "HEAD", type: "head" })).toBe(" H  HEAD ");
   });
 
   it("puts the name immediately after the sigil box", () => {
     const text = refBadgeText({ name: "main", type: "branch" });
-    expect(text.slice(0, REF_SIGIL_WIDTH)).toBe(" B ");
+    expect(text.slice(0, REF_SIGIL_WIDTH)).toBe(" LB ");
     expect(text.slice(REF_SIGIL_WIDTH)).toBe("main ");
+  });
+
+  it("measures the box against the sigil that is actually in it", () => {
+    // The decoration engine slices at this offset to colour the white box; a
+    // width that disagreed with the text would tint part of the name instead.
+    for (const type of Object.keys(REF_SIGIL) as (keyof typeof REF_SIGIL)[]) {
+      const text = refBadgeText({ name: "x", type });
+      expect(text.slice(0, REF_SIGIL_WIDTH)).toBe(` ${refSigil(type)} `);
+    }
+  });
+
+  it("gives every badge the same sigil box, one letter or two", () => {
+    // A one-letter T beside a two-letter RB would otherwise step the names in
+    // and out by a character down the column.
+    const types = Object.keys(REF_SIGIL) as (keyof typeof REF_SIGIL)[];
+    const boxes = types.map((type) => refBadgeText({ name: "x", type }).indexOf("x"));
+    expect(new Set(boxes).size).toBe(1);
+    expect(boxes[0]).toBe(REF_SIGIL_WIDTH);
+  });
+
+  it("pads a one-letter sigil rather than widening the two-letter one", () => {
+    expect(refSigil("tag")).toBe("T ");
+    expect(refSigil("remote")).toBe("RB");
+  });
+
+  it("keeps no sigil longer than the box that holds it", () => {
+    // A three-letter sigil would silently overflow the white box, since
+    // padEnd only pads and never truncates.
+    for (const sigil of Object.values(REF_SIGIL)) {
+      expect(sigil.length).toBeLessThanOrEqual(SIGIL_CHARS);
+    }
   });
 });

@@ -11,6 +11,40 @@ Release notes.
 
 ## [Unreleased]
 
+### Added
+- **Hover a ref badge to find out what it is.** Resting the pointer on a badge
+  now shows what that kind of ref is, plus the full path git filed it under —
+  `refs/remotes/origin/main` behind `origin/main`. Badges strip the namespace to
+  stay readable, which left `fc/pr613` indistinguishable from a branch of that
+  name; the tooltip tells them apart. The click menu carries the same
+  explanation above its actions.
+- Refs in namespaces git does not define (`refs/fc/*`, `refs/prepush-local/*`,
+  and anything else a tool creates) say so, rather than showing a bare `?` with
+  no way to find out what it means.
+
+### Changed
+- **Local and remote branch badges now read `LB` and `RB`.** A lone `R` for
+  "Remote" named the wrong thing — the remote is `origin`; the ref is a branch
+  that tracks one of its branches. Every sigil is padded to the same width, so
+  a one-letter `T` and a two-letter `RB` line up down the column.
+- The sidebar calls a remote-tracking ref a **Remote branch** rather than
+  "Remote", and an unrecognised namespace a **Custom ref** rather than "Ref".
+
+### Fixed
+- **Opening the graph no longer fails silently.** Every error in the open path
+  was discarded, so a failure and a button that does nothing looked identical
+  from the outside — no message, no log, nowhere to start. An explicit open now
+  reports what went wrong; background auto-refresh stays quiet as before. A
+  repository with no commits says so instead of appearing to ignore the click.
+- The git-extension event trigger logs why it fell back to polling, instead of
+  returning a silent `false` indistinguishable from the extension being absent.
+
+### Internal
+- ESLint, wired into `npm run lint` (so CI enforces it), with `no-empty` and a
+  local `no-silent-catch` rule. ESLint counts a comment as content, so
+  `no-empty` alone would still allow `catch { /* best effort */ }` — the exact
+  shape that hid the bug above.
+
 ## [0.5.0] - 2026-08-22
 
 ### Added

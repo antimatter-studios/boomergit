@@ -7,7 +7,7 @@ import { GraphDecorationEngine } from "../src/decorations/graphDecorations.js";
 import { GitGraphProvider } from "../src/providers/gitGraphProvider.js";
 import { computeGraphLayout } from "../src/graph/layout.js";
 import { COLOR, REF_BADGE_COLOR } from "../src/ui/theme.js";
-import type { Commit, Ref } from "../src/git/types.js";
+import { REF_SIGIL_WIDTH, type Commit, type Ref } from "../src/git/types.js";
 
 let storageDir: string;
 
@@ -180,7 +180,7 @@ describe("ref badge decorations", () => {
     const { engine, editor, rows, text } = setup(commits);
     engine.apply(editor as never, rows, commits);
 
-    const idx = text.indexOf(" B main ");
+    const idx = text.indexOf(" LB main ");
     // Inside the name, past the sigil box
     const hit = engine.getRefAt(new Position(0, idx + 4) as never);
     expect(hit?.ref.name).toBe("main");
@@ -192,7 +192,7 @@ describe("ref badge decorations", () => {
     const commits = [commit("a".repeat(40), { refs })];
     const { engine, editor, rows, text } = setup(commits);
     engine.apply(editor as never, rows, commits);
-    const idx = text.indexOf(" T v1.0 ");
+    const idx = text.indexOf(" T  v1.0 ");
     const hit = engine.getRefAt(new Position(0, idx + 1) as never);
     expect(hit?.ref.name).toBe("v1.0");
   });
@@ -209,8 +209,8 @@ describe("ref badge decorations", () => {
     const commits = [commit("a".repeat(40), { refs })];
     const { engine, editor, rows, text } = setup(commits);
     engine.apply(editor as never, rows, commits);
-    const headHit = engine.getRefAt(new Position(0, text.indexOf(" H HEAD ") + 4) as never);
-    const mainHit = engine.getRefAt(new Position(0, text.indexOf(" B main ") + 4) as never);
+    const headHit = engine.getRefAt(new Position(0, text.indexOf(" H  HEAD ") + 4) as never);
+    const mainHit = engine.getRefAt(new Position(0, text.indexOf(" LB main ") + 4) as never);
     expect(headHit?.ref.type).toBe("head");
     expect(mainHit?.ref.type).toBe("branch");
   });
@@ -224,7 +224,7 @@ describe("ref badge decorations", () => {
     engine.apply(editor as never, rows, commits);
     const secondLine = text.split("\n")[1];
     const hit = engine.getRefAt(
-      new Position(1, secondLine.indexOf(" B second ") + 4) as never
+      new Position(1, secondLine.indexOf(" LB second ") + 4) as never
     );
     expect(hit?.ref.name).toBe("second");
     expect(hit?.commitHash).toBe("b".repeat(40));
@@ -238,7 +238,7 @@ describe("ref badge decorations", () => {
     const { engine, editor, rows, text } = setup(commits);
     engine.apply(editor as never, rows, commits);
 
-    const badgeStart = text.indexOf(" R ");
+    const badgeStart = text.indexOf(" RB ");
     const hit = engine.getRefAt(new Position(0, badgeStart + 6) as never);
     expect(hit?.ref.name).toBe(longName);
   });
@@ -264,7 +264,7 @@ describe("ref badge decorations", () => {
     // several spans. Nothing that would repeat may sit on that middle.
     const longName = "origin/dependabot/github_actions/github-actions-bc056f11d8";
     const commits = [commit("a".repeat(40), { refs: [{ name: longName, type: "remote" }] })];
-    const { engine, editor, rows, text } = setup(commits);
+    const { engine, editor, rows } = setup(commits);
     engine.apply(editor as never, rows, commits);
 
     const laneColour = rows[0].commitColor;
@@ -309,10 +309,10 @@ describe("ref badge decorations", () => {
       expect(spans[i].start.character).toBe(spans[i - 1].end.character);
     }
     // Together they cover the name plus its trailing space, exactly
-    const badgeStart = text.indexOf(" R ");
-    expect(spans[0].start.character).toBe(badgeStart + 3);
+    const badgeStart = text.indexOf(" RB ");
+    expect(spans[0].start.character).toBe(badgeStart + REF_SIGIL_WIDTH);
     expect(spans[spans.length - 1].end.character).toBe(
-      badgeStart + 3 + longName.length + 1
+      badgeStart + REF_SIGIL_WIDTH + longName.length + 1
     );
   });
 
@@ -340,7 +340,7 @@ describe("ref badge decorations", () => {
     const { engine, editor, rows, text } = setup(commits);
     engine.apply(editor as never, rows, commits);
     engine.clearDecorations();
-    expect(engine.getRefAt(new Position(0, text.indexOf(" B main ") + 4) as never)).toBeUndefined();
+    expect(engine.getRefAt(new Position(0, text.indexOf(" LB main ") + 4) as never)).toBeUndefined();
   });
 
   it("colours the name pill with the commit's lane colour", () => {
@@ -361,7 +361,7 @@ describe("worktree marks", () => {
   }
 
   /** The SVG written for a given row, read back off disk. */
-  function tileFor(line: number, editor: { __decorations: Map<unknown, unknown> }) {
+  function tileFor(line: number) {
     const tiles = __state.decorationTypes.filter((d) => "before" in d.options);
     const before = tiles[line].options.before as { contentIconPath: { fsPath: string } };
     return fs.readFileSync(before.contentIconPath.fsPath, "utf8");
@@ -376,9 +376,9 @@ describe("worktree marks", () => {
     const { engine, editor, rows } = setup(commits);
     engine.apply(editor as never, rows, commits);
 
-    expect(tileFor(0, editor)).toContain(COLOR.worktreeAccent);
+    expect(tileFor(0)).toContain(COLOR.worktreeAccent);
     // The neighbouring row gets no ring
-    expect(tileFor(1, editor)).not.toContain(COLOR.worktreeAccent);
+    expect(tileFor(1)).not.toContain(COLOR.worktreeAccent);
   });
 
   it("draws the ring outside the dot, not over it", () => {
@@ -387,7 +387,7 @@ describe("worktree marks", () => {
     const { engine, editor, rows } = setup(commits);
     engine.apply(editor as never, rows, commits);
 
-    const svg = tileFor(0, editor);
+    const svg = tileFor(0);
     const radii = [...svg.matchAll(/r="([\d.]+)"/g)].map((m) => Number(m[1]));
     // The ring's radius exceeds the dot's, so the dot stays visible inside it
     expect(Math.max(...radii)).toBeGreaterThan(Math.min(...radii));
@@ -398,7 +398,7 @@ describe("worktree marks", () => {
     const commits = [commit("a".repeat(40), { refs: [worktreeRef] })];
     const { engine, editor, rows } = setup(commits);
     engine.apply(editor as never, rows, commits);
-    expect(tileFor(0, editor)).toMatch(
+    expect(tileFor(0)).toMatch(
       new RegExp(`fill="none"[^>]*stroke="${COLOR.worktreeAccent}"`)
     );
   });
@@ -479,10 +479,10 @@ describe("worktree marks", () => {
     ];
     const { engine, editor, rows, text } = setup(commits);
     engine.apply(editor as never, rows, commits);
-    expect(text).toContain(" B feature ");
-    expect(text).toContain(" W feature ");
+    expect(text).toContain(" LB feature ");
+    expect(text).toContain(" W  feature ");
     // The W badge hit-tests back to the worktree ref, not the branch
-    const hit = engine.getRefAt(new Position(0, text.indexOf(" W feature ") + 4) as never);
+    const hit = engine.getRefAt(new Position(0, text.indexOf(" W  feature ") + 4) as never);
     expect(hit?.ref.type).toBe("worktree");
   });
 });
@@ -593,7 +593,7 @@ describe("badge hover highlight", () => {
     const commits = [commit("a".repeat(40), { refs })];
     const { engine, editor, rows, text } = setup(commits);
     engine.apply(editor as never, rows, commits);
-    engine.highlightBadge(editor as never, new Position(0, text.indexOf(" B main ") + 4) as never);
+    engine.highlightBadge(editor as never, new Position(0, text.indexOf(" LB main ") + 4) as never);
     expect(decorationsWithCss(`outline: 2px solid ${COLOR.badgeHighlight}`)).toHaveLength(1);
   });
 
@@ -609,7 +609,7 @@ describe("badge hover highlight", () => {
     const commits = [commit("a".repeat(40), { refs })];
     const { engine, editor, rows, text } = setup(commits);
     engine.apply(editor as never, rows, commits);
-    const at = text.indexOf(" B main ") + 4;
+    const at = text.indexOf(" LB main ") + 4;
     engine.highlightBadge(editor as never, new Position(0, at) as never);
     engine.highlightBadge(editor as never, new Position(0, at) as never);
     const outlines = decorationsWithCss(`outline: 2px solid ${COLOR.badgeHighlight}`);
@@ -620,7 +620,7 @@ describe("badge hover highlight", () => {
     const commits = [commit("a".repeat(40), { refs })];
     const { engine, editor, rows, text } = setup(commits);
     engine.apply(editor as never, rows, commits);
-    engine.highlightBadge(editor as never, new Position(0, text.indexOf(" B main ") + 4) as never);
+    engine.highlightBadge(editor as never, new Position(0, text.indexOf(" LB main ") + 4) as never);
     engine.clearHighlight();
     const outlines = decorationsWithCss(`outline: 2px solid ${COLOR.badgeHighlight}`);
     expect(outlines.every((d) => d.disposed)).toBe(true);
@@ -633,7 +633,7 @@ describe("dispose", () => {
     const { engine, editor, rows, text } = setup(commits);
     engine.apply(editor as never, rows, commits);
     engine.selectRow(editor as never, 0);
-    engine.highlightBadge(editor as never, new Position(0, text.indexOf(" B main ") + 4) as never);
+    engine.highlightBadge(editor as never, new Position(0, text.indexOf(" LB main ") + 4) as never);
 
     engine.dispose();
 
@@ -752,7 +752,7 @@ describe("worktree row style setting", () => {
     return built;
   }
 
-  function tileHasRing(editor: { __decorations: Map<unknown, unknown> }) {
+  function tileHasRing() {
     const tile = __state.decorationTypes.find((d) => "before" in d.options)!;
     const path = (tile.options.before as { contentIconPath: { fsPath: string } }).contentIconPath
       .fsPath;
@@ -766,27 +766,27 @@ describe("worktree row style setting", () => {
   }
 
   it("tints the row and draws no ring by default", () => {
-    const { editor } = build("background");
+    build("background");
     expect(hasTint()).toBe(true);
-    expect(tileHasRing(editor)).toBe(false);
+    expect(tileHasRing()).toBe(false);
   });
 
   it("draws a ring and no tint in ring mode", () => {
-    const { editor } = build("ring");
+    build("ring");
     expect(hasTint()).toBe(false);
-    expect(tileHasRing(editor)).toBe(true);
+    expect(tileHasRing()).toBe(true);
   });
 
   it("does both when asked for both", () => {
-    const { editor } = build("both");
+    build("both");
     expect(hasTint()).toBe(true);
-    expect(tileHasRing(editor)).toBe(true);
+    expect(tileHasRing()).toBe(true);
   });
 
   it("does neither when asked for none", () => {
-    const { editor } = build("none");
+    build("none");
     expect(hasTint()).toBe(false);
-    expect(tileHasRing(editor)).toBe(false);
+    expect(tileHasRing()).toBe(false);
   });
 
   it("keeps the ruler tick whatever the style, including none", () => {
