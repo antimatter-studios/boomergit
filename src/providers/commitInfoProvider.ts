@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { gitQueryTrimmed } from "../git/exec.js";
-import { REF_LABEL, REF_SIGIL, type Commit, type RefType } from "../git/types.js";
+import { REF_HINT, REF_LABEL, REF_SIGIL, SIGIL_CHARS, type Commit, type RefType } from "../git/types.js";
 import { COLOR, REF_BADGE_COLOR } from "../ui/theme.js";
 
 /** Escape text for interpolation into the webview's HTML. */
@@ -15,11 +15,17 @@ function escapeHtml(text: string): string {
 /**
  * A ref badge, in the same two-tone form the graph uses: a white box holding
  * the type sigil, then the ref name on a colour picked by type.
+ *
+ * The `title` says what the type is and what it means, matching the graph's
+ * own badge tooltip — "Remote" alone left the sigil as cryptic as it found it.
  */
 function badgeHtml(name: string, type: RefType): string {
+  const tip = escapeHtml(`${REF_LABEL[type]} — ${REF_HINT[type]}`);
   return (
-    `<span style="font-size:0.85em;font-weight:bold;margin-right:4px;white-space:nowrap;" title="${REF_LABEL[type]}">` +
-    `<span style="background:${COLOR.sigilBackground};color:${COLOR.sigilText};padding:1px 4px;border-radius:3px 0 0 3px;">${REF_SIGIL[type]}</span>` +
+    `<span style="font-size:0.85em;font-weight:bold;margin-right:4px;white-space:nowrap;" title="${tip}">` +
+    // Same fixed field as the graph's badges, expressed as a width rather than
+    // padding: HTML collapses the trailing space the text form relies on.
+    `<span style="display:inline-block;text-align:center;min-width:${SIGIL_CHARS}ch;background:${COLOR.sigilBackground};color:${COLOR.sigilText};padding:1px 4px;border-radius:3px 0 0 3px;">${REF_SIGIL[type]}</span>` +
     `<span style="background:${REF_BADGE_COLOR[type]};color:${COLOR.badgeTextOnLight};padding:1px 6px;border-radius:0 3px 3px 0;">${escapeHtml(name)}</span>` +
     `</span>`
   );

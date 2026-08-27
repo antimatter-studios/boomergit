@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { buildBadgeMenu, buildRowMenu } from "../src/ui/menus.js";
+import { buildBadgeMenu, buildRefTip, buildRowMenu } from "../src/ui/menus.js";
 import { resolveClickIntent } from "../src/ui/clickIntent.js";
 import { computeDiffTarget } from "../src/ui/diffTarget.js";
 import { EMPTY_REF } from "../src/providers/gitFileContentProvider.js";
 import { TIMING } from "../src/ui/timings.js";
 import { COLOR, REF_BADGE_COLOR } from "../src/ui/theme.js";
-import { parseRefs, REF_SIGIL, REF_LABEL, type Commit, type Ref } from "../src/git/types.js";
+import { parseRefs, REF_SIGIL, REF_LABEL, REF_HINT, type Commit, type Ref } from "../src/git/types.js";
 import type { ChangedFile } from "../src/providers/changedFilesProvider.js";
 
 function commit(over: Partial<Commit> = {}): Commit {
@@ -198,8 +198,19 @@ describe("buildBadgeMenu", () => {
   });
 
   it("separates entries with a blank line", () => {
-    // checkout, create worktree, delete, copy ref, copy hash
-    expect(buildBadgeMenu(branch, commit(), { currentBranch: "main" }).split("\n\n")).toHaveLength(5);
+    // The explanation and its rule come first; below it: checkout, create
+    // worktree, delete, copy ref, copy hash.
+    const md = buildBadgeMenu(branch, commit(), { currentBranch: "main" });
+    const [, actions] = md.split("\n\n---\n\n");
+    expect(actions.split("\n\n")).toHaveLength(5);
+  });
+
+  it("explains what the ref is above the actions", () => {
+    const md = buildBadgeMenu({ name: "fc/pr613", type: "other", full: "refs/fc/pr613" }, commit());
+    expect(md).toContain("Custom ref");
+    expect(md).toContain("refs/fc/pr613");
+    // The explanation precedes every action, not just sits somewhere in it.
+    expect(md.indexOf("refs/fc/pr613")).toBeLessThan(md.indexOf("Copy Ref Name"));
   });
 
   it("acts on the full ref name even when the badge shows a shortened one", () => {
@@ -223,6 +234,36 @@ describe("buildBadgeMenu", () => {
   it("escapes a ref name safely into the command arguments", () => {
     const md = buildBadgeMenu({ name: "feat/a b&c", type: "branch" }, commit());
     expect(linkArgs(md, "boomergit.checkoutRef")).toEqual(["feat/a b&c", "branch"]);
+  });
+});
+
+describe("buildRefTip", () => {
+  it("says what the type is and what it means", () => {
+    const md = buildRefTip({ name: "origin/main", type: "remote", full: "refs/remotes/origin/main" });
+    expect(md).toContain(REF_LABEL.remote);
+    expect(md).toContain(REF_HINT.remote);
+  });
+
+  it("shows the path the badge had to strip", () => {
+    expect(buildRefTip({ name: "fc/pr613", type: "other", full: "refs/fc/pr613" })).toContain(
+      "refs/fc/pr613"
+    );
+  });
+
+  it("explains the '?' sigil rather than leaving it mute", () => {
+    const md = buildRefTip({ name: "fc/pr613", type: "other", full: "refs/fc/pr613" });
+    expect(md).toContain("namespace git does not define");
+  });
+
+  it("offers no action links — a tooltip is not the menu", () => {
+    const md = buildRefTip({ name: "feature", type: "branch", full: "refs/heads/feature" });
+    expect(md).not.toContain("command:");
+  });
+
+  it("holds together for a pseudo-ref with no path", () => {
+    const md = buildRefTip({ name: "wt-feature", type: "worktree" });
+    expect(md).toContain(REF_LABEL.worktree);
+    expect(md).not.toContain("refs/");
   });
 });
 
@@ -353,11 +394,13 @@ describe("shared constants", () => {
     expect(TIMING.openMenuMs).toBeLessThan(TIMING.cursorResetWithMenuMs);
   });
 
-  it("gives every ref type a sigil, a label and a badge colour", () => {
+  it("gives every ref type a sigil, a label, a hint and a badge colour", () => {
     const types = Object.keys(REF_SIGIL) as (keyof typeof REF_SIGIL)[];
     for (const type of types) {
-      expect(REF_SIGIL[type]).toHaveLength(1);
+      // One or two characters: the badge is a sigil, not an abbreviation.
+      expect(REF_SIGIL[type]).toMatch(/^[A-Z?]{1,2}$/);
       expect(REF_LABEL[type]).toBeTruthy();
+      expect(REF_HINT[type]).toBeTruthy();
       expect(REF_BADGE_COLOR[type]).toMatch(/^#[0-9a-f]{6}$/i);
     }
   });

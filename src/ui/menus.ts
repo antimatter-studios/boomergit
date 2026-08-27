@@ -1,5 +1,5 @@
 import { shortHash } from "../git/format.js";
-import type { Commit, Ref } from "../git/types.js";
+import { REF_HINT, REF_LABEL, type Commit, type Ref } from "../git/types.js";
 import { COLOR } from "./theme.js";
 
 /**
@@ -53,6 +53,27 @@ function copyHashEntry(commit: Commit): string {
     `Copied: ${shortHash(commit.hash)}`
   );
 }
+
+/**
+ * The tooltip shown when the mouse rests on a badge, as opposed to the menu a
+ * click opens: what this kind of ref is, and the path git filed it under.
+ *
+ * The full path is the half the badge cannot show — every namespace prefix is
+ * stripped for display, so `fc/pr613` and a branch literally named `fc/pr613`
+ * read identically until you see `refs/fc/pr613`.
+ */
+export function buildRefTip(ref: Ref): string {
+  const heading = `${enabled(`**${REF_LABEL[ref.type]}**`)}`;
+  const path = ref.full ? `${SEPARATOR}\`${ref.full}\`` : "";
+  return `${heading}${path}${SEPARATOR}${REF_HINT[ref.type]}`;
+}
+
+/**
+ * Horizontal rule between the menu's explanation and its actions. The hover
+ * widget renders markdown, so `---` needs the blank lines around it or it is
+ * read as a setext underline for the line above.
+ */
+const RULE = `${SEPARATOR}---${SEPARATOR}`;
 
 /** What the caller knows about a ref that changes which actions are possible. */
 export interface BadgeMenuContext {
@@ -126,7 +147,10 @@ export function buildBadgeMenu(
     copyHashEntry(commit)
   );
 
-  return entries.join(SEPARATOR);
+  // The same explanation the tooltip gives, above the actions: a click
+  // dismisses the tooltip, and that is exactly when the user is deciding
+  // whether the ref is the one they meant.
+  return `${buildRefTip(ref)}${RULE}${entries.join(SEPARATOR)}`;
 }
 
 /** The menu for clicking a commit row rather than one of its badges. */

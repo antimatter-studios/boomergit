@@ -71,8 +71,11 @@ try {
   try {
     sh("git checkout -f main");
     sh(`git branch -D ${relBranch}`);
-  } catch {
-    /* best effort */
+  } catch (cleanupErr) {
+    // Best effort: the original failure is what matters and is rethrown below.
+    // Say what could not be undone, though, or the tree is left in a state the
+    // user has no idea about.
+    console.error(`release: cleanup also failed — ${relBranch} may still exist: ${cleanupErr.message}`);
   }
   throw err;
 }

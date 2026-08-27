@@ -64,9 +64,9 @@ describe("GitGraphProvider", () => {
       }),
     ]);
     const line = provider.provideTextDocumentContent(uri);
-    expect(line).toContain(" H HEAD  B main  T v1.0 tip");
+    expect(line).toContain(" H  HEAD  LB main  T  v1.0 tip");
     // Badges precede the subject
-    expect(line.indexOf(" B main ")).toBeLessThan(line.indexOf("tip"));
+    expect(line.indexOf(" LB main ")).toBeLessThan(line.indexOf("tip"));
   });
 
   it("emits no badge section for a commit with no refs", () => {

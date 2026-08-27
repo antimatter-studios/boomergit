@@ -164,7 +164,7 @@ describe("showGraph", () => {
     };
     const text = provider.provideTextDocumentContent(Uri.parse(GRAPH_URI));
     expect(text).toContain("second");
-    expect(text).toContain(" B main ");
+    expect(text).toContain(" LB main ");
   });
 
   it("opens the document as the active editor", async () => {
@@ -199,16 +199,23 @@ describe("showGraph", () => {
     expect(inverted.length).toBeGreaterThan(0);
   });
 
-  it("survives a repository with no commits", async () => {
+  it("survives a repository with no commits, and says why nothing opened", async () => {
     defaultRepo({ log: "" });
     await openGraph();
+    // Not an error — the repo is fine, there is just nothing to draw.
     expect(__state.errorMessages).toEqual([]);
+    expect(__state.warningMessages).toHaveLength(1);
+    expect(__state.warningMessages[0]).toContain("no commits");
   });
 
-  it("survives git log failing outright", async () => {
+  it("survives git log failing outright, and says so", async () => {
+    // Surviving is not enough: an explicit open that swallows the error looks
+    // exactly like a button that does nothing, which is how this was found.
     gitResponds({}, new Set(["log"]));
     await openGraph();
-    expect(__state.errorMessages).toEqual([]);
+    expect(__state.errorMessages).toHaveLength(1);
+    expect(__state.errorMessages[0]).toContain("could not open the graph");
+    expect(__state.errorMessages[0]).toContain("log refused");
   });
 });
 
@@ -465,7 +472,7 @@ describe("click handling", () => {
     await openGraph();
     const editor = window.activeTextEditor!;
     const line0 = editor.document.lineAt(0).text;
-    const badgeAt = line0.indexOf(" B main ") + 4;
+    const badgeAt = line0.indexOf(" LB main ") + 5;
 
     vi.useFakeTimers();
     click(0, badgeAt);
@@ -792,7 +799,7 @@ describe("worktrees", () => {
     const provider = __state.registeredContentProviders.get("boomergit") as {
       provideTextDocumentContent(u: Uri): string;
     };
-    expect(provider.provideTextDocumentContent(Uri.parse(GRAPH_URI))).toContain(" W second ");
+    expect(provider.provideTextDocumentContent(Uri.parse(GRAPH_URI))).toContain(" W  second ");
   });
 
   it("never badges the main worktree, which is the repository itself", async () => {
@@ -802,7 +809,7 @@ describe("worktrees", () => {
     const provider = __state.registeredContentProviders.get("boomergit") as {
       provideTextDocumentContent(u: Uri): string;
     };
-    expect(provider.provideTextDocumentContent(Uri.parse(GRAPH_URI))).not.toContain(" W main ");
+    expect(provider.provideTextDocumentContent(Uri.parse(GRAPH_URI))).not.toContain(" W  main ");
   });
 
   it("badges a linked worktree even when it is the one being viewed", async () => {
@@ -816,8 +823,8 @@ describe("worktrees", () => {
       provideTextDocumentContent(u: Uri): string;
     };
     const text = provider.provideTextDocumentContent(Uri.parse(GRAPH_URI));
-    expect(text).toContain(" W second ");
-    expect(text).not.toContain(" W main ");
+    expect(text).toContain(" W  second ");
+    expect(text).not.toContain(" W  main ");
   });
 
   it("refuses checkout of a branch another worktree holds", async () => {
@@ -826,9 +833,9 @@ describe("worktrees", () => {
     await openGraph();
     const editor = window.activeTextEditor!;
     const line1 = editor.document.lineAt(1).text;
-    const badgeAt = line1.indexOf(" W second ");
+    const badgeAt = line1.indexOf(" W  second ");
     // The branch badge on the same row is what a user would click
-    const branchAt = line1.indexOf(" B second ");
+    const branchAt = line1.indexOf(" LB second ");
     expect(badgeAt >= 0 || branchAt >= 0).toBe(true);
   });
 

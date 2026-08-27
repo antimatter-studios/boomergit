@@ -32,12 +32,27 @@ export type RefType =
 export interface Ref {
   name: string;
   type: RefType;
+  /**
+   * The ref path git reported, before the namespace prefix was stripped for
+   * display: `refs/remotes/origin/main` behind the name `origin/main`. Absent
+   * for the pseudo-refs that have no path — HEAD, worktrees, `replaced`, and
+   * anything arriving in short (`--decorate=short`) form.
+   */
+  full?: string;
 }
 
-/** Capital letter shown in the white box at the head of each badge. */
+/**
+ * Capitals shown in the white box at the head of each badge.
+ *
+ * `LB`/`RB` rather than `B`/`R`: the pair that actually needs telling apart is
+ * local branch from remote-tracking branch, and a lone `R` reads as "remote",
+ * which is `origin` — a different thing from the branch this ref names. Two
+ * letters are the shortest form that says branch *and* which kind. Everything
+ * else has no counterpart to be confused with, so it keeps one letter.
+ */
 export const REF_SIGIL: Record<RefType, string> = {
-  branch: "B",
-  remote: "R",
+  branch: "LB",
+  remote: "RB",
   tag: "T",
   head: "H",
   stash: "S",
@@ -47,30 +62,69 @@ export const REF_SIGIL: Record<RefType, string> = {
   worktree: "W",
 };
 
-/** Human-readable type name, for the sidebar. */
+/**
+ * Human-readable type name, for the sidebar.
+ *
+ * "Remote branch", not "Remote": the remote is `origin`, and this ref is a
+ * branch that tracks one of its branches. Naming it after the remote made the
+ * `R` describe the wrong noun.
+ */
 export const REF_LABEL: Record<RefType, string> = {
   branch: "Branch",
-  remote: "Remote",
+  remote: "Remote branch",
   tag: "Tag",
   head: "HEAD",
   stash: "Stash",
   note: "Note",
   pr: "Pull Request",
-  other: "Ref",
+  other: "Custom ref",
   worktree: "Worktree",
 };
 
-/** Characters the sigil box occupies at the start of a badge: " X ". */
-export const REF_SIGIL_WIDTH = 3;
+/**
+ * One sentence saying what the badge means, shown on mouse-over.
+ *
+ * The sigil alone can't carry this: `?` in particular is honest but mute, and
+ * a ref in a namespace nobody standardised is exactly the case where the user
+ * has no way to guess. Every type gets one so the tip is never a special case.
+ */
+export const REF_HINT: Record<RefType, string> = {
+  branch: "A local branch. Moves forward as you commit on it.",
+  remote:
+    "A remote-tracking branch — where that branch stood on the remote as of your last fetch. Local edits never move it.",
+  tag: "A tag. Pinned to this one commit, unlike a branch.",
+  head: "Where your working tree is right now.",
+  stash: "The most recent `git stash` entry.",
+  note: "A note — text attached to a commit without rewriting it.",
+  pr: "A code-review ref published by the host (GitHub, GitLab, Gerrit). Read-only; fetched, never pushed to.",
+  other:
+    "A ref in a namespace git does not define, so nothing standard says what it is for — usually a tool or script put it here. That is what the `?` means.",
+  worktree: "Another working tree has this commit checked out. Not a ref git stores.",
+};
 
 /**
- * Badge text as it appears in the graph document: " X name ".
+ * Sigil field width, in characters. Every sigil is padded to it, so a one-
+ * letter `T` and a two-letter `RB` produce the same size white box — badges
+ * sitting side by side line up rather than stepping in and out by a character.
+ */
+export const SIGIL_CHARS = 2;
+
+/** The sigil as it appears in the box: right-padded to a common width. */
+export function refSigil(type: RefType): string {
+  return REF_SIGIL[type].padEnd(SIGIL_CHARS);
+}
+
+/** Characters the sigil box occupies at the start of a badge: " XX ". */
+export const REF_SIGIL_WIDTH = SIGIL_CHARS + 2;
+
+/**
+ * Badge text as it appears in the graph document: " XX name ".
  * The first REF_SIGIL_WIDTH chars are decorated as the white sigil box, the
  * rest as the commit-coloured name pill — so this is the single source of
  * truth for both the document provider and the decoration engine.
  */
 export function refBadgeText(ref: Ref): string {
-  return ` ${REF_SIGIL[ref.type]} ${ref.name} `;
+  return ` ${refSigil(ref.type)} ${ref.name} `;
 }
 
 /**
@@ -93,24 +147,24 @@ function classify(full: string): Ref {
   // it would offer to check out and delete a branch that does not exist.
   // (Bisect refs are not special-cased like this; they arrive as refs/bisect/*.)
   if (full === "replaced") return { name: "replaced", type: "other" };
-  if (full.startsWith("refs/heads/")) return { name: full.slice(11), type: "branch" };
-  if (full.startsWith("refs/remotes/")) return { name: full.slice(13), type: "remote" };
-  if (full.startsWith("refs/tags/")) return { name: full.slice(10), type: "tag" };
-  if (full === "refs/stash") return { name: "stash", type: "stash" };
-  if (full.startsWith("refs/notes/")) return { name: full.slice(11), type: "note" };
+  if (full.startsWith("refs/heads/")) return { name: full.slice(11), type: "branch", full };
+  if (full.startsWith("refs/remotes/")) return { name: full.slice(13), type: "remote", full };
+  if (full.startsWith("refs/tags/")) return { name: full.slice(10), type: "tag", full };
+  if (full === "refs/stash") return { name: "stash", type: "stash", full };
+  if (full.startsWith("refs/notes/")) return { name: full.slice(11), type: "note", full };
   for (const prefix of PR_PREFIXES) {
     if (!full.startsWith(prefix)) continue;
     const rest = full.slice(prefix.length);
     // refs/pull/42/head -> #42 ; anything odd keeps its path
     const id = rest.split("/")[0];
-    return { name: /^\d+$/.test(id) ? `#${id}` : rest, type: "pr" };
+    return { name: /^\d+$/.test(id) ? `#${id}` : rest, type: "pr", full };
   }
   // Gerrit: refs/changes/34/1234/2 — the change number is the middle segment
   if (full.startsWith("refs/changes/")) {
     const parts = full.slice(13).split("/");
-    return { name: parts.length >= 2 ? `#${parts[1]}` : parts.join("/"), type: "pr" };
+    return { name: parts.length >= 2 ? `#${parts[1]}` : parts.join("/"), type: "pr", full };
   }
-  if (full.startsWith("refs/")) return { name: full.slice(5), type: "other" };
+  if (full.startsWith("refs/")) return { name: full.slice(5), type: "other", full };
   // Short (`--decorate=short`) form: nothing to key off but the slash.
   return { name: full, type: full.includes("/") ? "remote" : "branch" };
 }
@@ -123,7 +177,9 @@ export function parseRefs(raw: string): Ref[] {
     if (!name) continue;
     // "tag: v1.0" (short) or "tag: refs/tags/v1.0" (full)
     if (name.startsWith("tag: ")) {
-      refs.push({ name: name.slice(5).replace(/^refs\/tags\//, ""), type: "tag" });
+      const tag = name.slice(5);
+      const short = tag.replace(/^refs\/tags\//, "");
+      refs.push(tag === short ? { name: short, type: "tag" } : { name: short, type: "tag", full: tag });
       continue;
     }
     // "HEAD -> refs/heads/main" — record HEAD and the branch it points at

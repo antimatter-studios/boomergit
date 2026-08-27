@@ -4,7 +4,7 @@ import { gitRun, gitQuery, gitQueryTrimmed } from "./git/exec.js";
 import { localBranchName } from "./git/types.js";
 import { TIMING } from "./ui/timings.js";
 import { COLOR } from "./ui/theme.js";
-import { buildBadgeMenu, buildRowMenu, type BadgeMenuContext } from "./ui/menus.js";
+import { buildBadgeMenu, buildRefTip, buildRowMenu, type BadgeMenuContext } from "./ui/menus.js";
 import { resolveClickIntent } from "./ui/clickIntent.js";
 import { computeDiffTarget } from "./ui/diffTarget.js";
 import type { GraphRow } from "./graph/types.js";
@@ -267,7 +267,15 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // Hover provider — click-triggered only, context-sensitive menu
+  /**
+   * The hover widget serves two different things.
+   *
+   * A click opens the action menu — the widget is only the renderer there,
+   * nothing is hovering. Resting the mouse on a badge, which until now drew the
+   * highlight and returned nothing, gets a genuine tooltip saying what that
+   * kind of ref is: the sigil is a one-letter convention either way, so the
+   * meaning has to live somewhere the user can reach without clicking.
+   */
   const hoverProvider = vscode.languages.registerHoverProvider(
     { scheme: SCHEME },
     {
@@ -280,10 +288,6 @@ export function activate(context: vscode.ExtensionContext) {
           decorationEngine.highlightBadge(editor, position);
         }
 
-        // Only show menu on click-triggered hover
-        if (!hoverTriggeredByClick) return;
-        hoverTriggeredByClick = false;
-
         const commit = decorationEngine.getCommitAt(position.line);
         if (!commit) return;
 
@@ -292,6 +296,17 @@ export function activate(context: vscode.ExtensionContext) {
         md.isTrusted = true;
         md.supportHtml = true;
         md.supportThemeIcons = true;
+
+        // A menu already open for this badge must survive the mouse moving
+        // inside it; otherwise the tooltip would replace the user's own menu.
+        const menuOpenHere =
+          !!refHit && lastHoverKey === `ref:${position.line}:${refHit.ref.name}`;
+        if (!hoverTriggeredByClick && !menuOpenHere) {
+          if (!refHit) return;
+          md.appendMarkdown(buildRefTip(refHit.ref));
+          return new vscode.Hover(md, refHit.range);
+        }
+        hoverTriggeredByClick = false;
 
         if (refHit) {
           md.appendMarkdown(buildBadgeMenu(refHit.ref, commit, menuContextFor(refHit.ref)));
@@ -358,7 +373,17 @@ export function activate(context: vscode.ExtensionContext) {
         parseGitLog(workspaceCwd),
         listWorktrees(workspaceCwd),
       ]);
-      if (commits.length === 0) return;
+      if (commits.length === 0) {
+        // An empty repository, or a git that returned nothing. Silent on a
+        // background refresh, but an explicit open must say why it opened
+        // nothing rather than appearing to have ignored the click.
+        if (!opts.preserveView) {
+          vscode.window.showWarningMessage(
+            `${DISPLAY_NAME}: no commits found in ${workspaceCwd}.`
+          );
+        }
+        return;
+      }
 
       worktrees = allWorktrees;
       worktreesProvider.setWorktrees(allWorktrees);
@@ -451,8 +476,17 @@ export function activate(context: vscode.ExtensionContext) {
       // refresh.
       const sig = await getRefSignature();
       if (sig) lastRefSig = sig;
-    } catch { /* silently fail on refresh */ }
-    finally { refreshing = false; }
+    } catch (err: unknown) {
+      // A background refresh stays quiet: a transient git error during
+      // auto-refresh must not interrupt what the user is doing. An explicit
+      // open has nothing else to show for itself, and swallowing the error
+      // there made a crash look exactly like a button that does nothing.
+      console.error("BoomerGit: refresh failed", err);
+      if (!opts.preserveView) {
+        const msg = err instanceof Error ? err.message : String(err);
+        vscode.window.showErrorMessage(`${DISPLAY_NAME}: could not open the graph — ${msg}`);
+      }
+    } finally { refreshing = false; }
   }
 
   /**
@@ -764,22 +798,45 @@ export function activate(context: vscode.ExtensionContext) {
   // extension is unavailable.
   let gitStateSub: vscode.Disposable | undefined;
   let openRepoSub: vscode.Disposable | undefined;
+
+  /**
+   * The slice of `vscode.git`'s exported API this uses.
+   *
+   * The extension ships no types, so this is the contract we rely on written
+   * down rather than an `any` that hides which four members we touch — and it
+   * is the same shape a failure would have to be diagnosed against.
+   */
+  interface GitRepository {
+    rootUri?: vscode.Uri;
+    state: { onDidChange(listener: () => void): vscode.Disposable };
+  }
+  interface GitApi {
+    repositories: GitRepository[];
+    onDidOpenRepository(listener: () => void): vscode.Disposable;
+  }
+  interface GitExtensionExports {
+    getAPI(version: 1): GitApi;
+  }
+
   async function setupGitEventTrigger(): Promise<boolean> {
     try {
-      const ext = vscode.extensions.getExtension<any>("vscode.git");
+      const ext = vscode.extensions.getExtension<GitExtensionExports>("vscode.git");
       if (!ext) return false;
       const git = ext.isActive ? ext.exports : await ext.activate();
       const api = git.getAPI(1);
       const mine = () =>
-        api.repositories.find((r: any) => r.rootUri?.fsPath === workspaceCwd) ?? api.repositories[0];
-      const hook = (repo: any) => {
+        api.repositories.find((r) => r.rootUri?.fsPath === workspaceCwd) ?? api.repositories[0];
+      const hook = (repo: GitRepository | undefined) => {
         if (gitStateSub || !repo) return;
         gitStateSub = repo.state.onDidChange(() => { void maybeAutoRefresh(); });
       };
       hook(mine());
       openRepoSub = api.onDidOpenRepository(() => hook(mine())); // repos may load after activation
       return true;
-    } catch {
+    } catch (err: unknown) {
+      // Not fatal: the caller falls back to polling. Still worth saying, since
+      // a silent false here looks identical to the extension being absent.
+      console.error("BoomerGit: git extension event trigger unavailable", err);
       return false;
     }
   }
