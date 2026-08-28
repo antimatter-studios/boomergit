@@ -96,6 +96,30 @@ describe("gitQuery", () => {
     await expect(gitQuery(["rev-parse", "HEAD"], "/repo")).resolves.toBe("");
   });
 
+  it("logs the failure it is swallowing, with git's own reason", async () => {
+    // "" is a legitimate answer here — an empty repo has no HEAD — so the
+    // result cannot carry the failure. Without the log, a broken repository
+    // renders as missing data with no sign that git refused.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    failsWith("Command failed", "fatal: ambiguous argument 'HEAD'");
+    await gitQuery(["rev-parse", "HEAD"], "/repo");
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    const message = String(warn.mock.calls[0][0]);
+    expect(message).toContain("rev-parse");
+    expect(message).toContain("fatal: ambiguous argument 'HEAD'");
+    warn.mockRestore();
+  });
+
+  it("stays quiet when git succeeds, including on empty output", async () => {
+    // A command that legitimately returns nothing must not look like a failure.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    succeedsWith("");
+    await expect(gitQuery(["for-each-ref"], "/repo")).resolves.toBe("");
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it("preserves interior whitespace exactly", async () => {
     succeedsWith("a\tb\nc\td\n");
     await expect(gitQuery(["for-each-ref"], "/repo")).resolves.toBe("a\tb\nc\td\n");
