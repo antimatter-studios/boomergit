@@ -47,11 +47,21 @@ export async function gitRun(args: string[], cwd: string): Promise<string> {
  * For read-only queries where failure is an ordinary outcome rather than an
  * error worth surfacing: a repo with no commits yet has no HEAD to rev-parse,
  * and a file that doesn't exist in a given commit has no content to show.
+ *
+ * The caller cannot tell those apart from a genuinely broken repository — both
+ * arrive as "". That is the contract every call site is written against and it
+ * stays, but the failure no longer vanishes with it: a repository that renders
+ * with no worktrees, or no branch highlighted, otherwise gives no sign that git
+ * refused and nowhere to start looking.
  */
 export async function gitQuery(args: string[], cwd: string): Promise<string> {
   try {
     return (await run(args, cwd)).toString("utf8");
-  } catch {
+  } catch (err: unknown) {
+    // `git <subcommand>` identifies the call well enough; the rest of the
+    // argument list carries refs and paths that add nothing to the diagnosis.
+    const detail = err instanceof Error ? err.message : String(err);
+    console.warn(`BoomerGit: git ${args[0]} failed, treating as empty — ${detail}`);
     return "";
   }
 }

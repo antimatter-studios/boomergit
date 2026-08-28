@@ -11,6 +11,14 @@ Release notes.
 
 ## [Unreleased]
 
+### Fixed
+- A failing read-only git command no longer disappears without trace. These
+  queries resolve to an empty string on failure by design — an empty repository
+  has no HEAD to resolve, and a file absent from a commit has no content — so
+  the result cannot carry the failure, and a genuinely broken repository simply
+  rendered as missing data. The reason git gave is now logged. No change to
+  what any view shows.
+
 ## [0.6.1] - 2026-08-28
 
 ### Fixed
