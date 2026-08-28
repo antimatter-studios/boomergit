@@ -11,6 +11,8 @@ Release notes.
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-08-28
+
 ### Fixed
 - A failing read-only git command no longer disappears without trace. These
   queries resolve to an empty string on failure by design — an empty repository
