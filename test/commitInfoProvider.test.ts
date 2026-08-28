@@ -29,6 +29,12 @@ function commit(over: Partial<Commit> = {}): Commit {
   };
 }
 
+/** The inline styles of a badge's two halves: the sigil box, then the name pill. */
+function badgeHalves(html: string): string[] {
+  const badges = /<div class="badges">(.*?)<\/div>/s.exec(html)?.[1] ?? "";
+  return [...badges.matchAll(/<span style="([^"]*)">[^<]*<\/span>/g)].map((m) => m[1]);
+}
+
 /** A stand-in for the WebviewView the extension host would hand us. */
 function fakeView() {
   const visibility = new EventEmitter<void>();
@@ -169,6 +175,58 @@ describe("CommitInfoProvider", () => {
     expect(view.webview.html).toContain(REF_BADGE_COLOR.tag);
     expect(view.webview.html).toContain(">T<");
     expect(view.webview.html).toContain("v1.0");
+  });
+
+  it("gives both halves of a badge the same box, so neither is taller", async () => {
+    // The sigil had a min-width and so had to be inline-block, while the name
+    // stayed plain inline — which takes the font's content area rather than the
+    // whole line box, leaving the white sigil visibly taller than the pill.
+    const provider = new CommitInfoProvider();
+    const view = fakeView();
+    provider.resolveWebviewView(view as never);
+    await provider.showCommit(
+      commit({
+        refs: [
+          { name: "main", type: "branch" },
+          { name: "v1.0", type: "tag" },
+        ],
+      }),
+      "/repo",
+      "main"
+    );
+
+    const halves = badgeHalves(view.webview.html);
+    expect(halves).toHaveLength(2);
+    for (const decl of ["display:inline-block", "vertical-align:middle", "padding:1px 6px"]) {
+      expect(halves[0]).toContain(decl);
+      expect(halves[1]).toContain(decl);
+    }
+    const lineHeight = (style: string) => /line-height:([^;]+)/.exec(style)?.[1];
+    expect(lineHeight(halves[0])).toBeDefined();
+    expect(lineHeight(halves[0])).toBe(lineHeight(halves[1]));
+  });
+
+  it("keeps both halves at one font size, set once on the wrapper", async () => {
+    // Sizing either half on its own is what makes them disagree; the wrapper
+    // owns the size so the two can only ever match.
+    const provider = new CommitInfoProvider();
+    const view = fakeView();
+    provider.resolveWebviewView(view as never);
+    await provider.showCommit(
+      commit({
+        refs: [
+          { name: "main", type: "branch" },
+          { name: "v1.0", type: "tag" },
+        ],
+      }),
+      "/repo",
+      "main"
+    );
+
+    const halves = badgeHalves(view.webview.html);
+    expect(halves).toHaveLength(2);
+    expect(halves[0]).not.toContain("font-size");
+    expect(halves[1]).not.toContain("font-size");
   });
 
   it("never renders HEAD as a badge", async () => {
