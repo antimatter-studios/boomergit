@@ -11,6 +11,8 @@ Release notes.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-08-28
+
 ### Fixed
 - Sidebar ref badges no longer render with the white sigil box taller than the
   name beside it. The sigil needed `display:inline-block` for the fixed-width
