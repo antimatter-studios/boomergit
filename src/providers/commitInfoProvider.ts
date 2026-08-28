@@ -3,6 +3,12 @@ import { gitQueryTrimmed } from "../git/exec.js";
 import { REF_HINT, REF_LABEL, REF_SIGIL, SIGIL_CHARS, type Commit, type RefType } from "../git/types.js";
 import { COLOR, REF_BADGE_COLOR } from "../ui/theme.js";
 
+/**
+ * Line height shared by both halves of a ref badge. Named rather than inlined
+ * twice: the two halves are only the same height while it is the same number.
+ */
+const BADGE_LINE_HEIGHT = 1.5;
+
 /** Escape text for interpolation into the webview's HTML. */
 function escapeHtml(text: string): string {
   return text
@@ -21,12 +27,20 @@ function escapeHtml(text: string): string {
  */
 function badgeHtml(name: string, type: RefType): string {
   const tip = escapeHtml(`${REF_LABEL[type]} — ${REF_HINT[type]}`);
+  // Both halves are laid out identically, because they have to end up the same
+  // height. An inline-block box takes the whole line-height while a plain
+  // inline one takes only the font's content area, so giving the sigil a
+  // min-width (and nothing else) made it visibly taller than the name beside
+  // it. Same display, same vertical padding, same line-height, and
+  // vertical-align so neither sits on a different baseline.
+  const half =
+    `display:inline-block;vertical-align:middle;line-height:${BADGE_LINE_HEIGHT};padding:1px 6px;`;
   return (
     `<span style="font-size:0.85em;font-weight:bold;margin-right:4px;white-space:nowrap;" title="${tip}">` +
-    // Same fixed field as the graph's badges, expressed as a width rather than
-    // padding: HTML collapses the trailing space the text form relies on.
-    `<span style="display:inline-block;text-align:center;min-width:${SIGIL_CHARS}ch;background:${COLOR.sigilBackground};color:${COLOR.sigilText};padding:1px 4px;border-radius:3px 0 0 3px;">${REF_SIGIL[type]}</span>` +
-    `<span style="background:${REF_BADGE_COLOR[type]};color:${COLOR.badgeTextOnLight};padding:1px 6px;border-radius:0 3px 3px 0;">${escapeHtml(name)}</span>` +
+    // The sigil field is a fixed width rather than padding: HTML collapses the
+    // trailing space the graph's text badges rely on to align `T` with `RB`.
+    `<span style="${half}text-align:center;min-width:${SIGIL_CHARS}ch;background:${COLOR.sigilBackground};color:${COLOR.sigilText};border-radius:3px 0 0 3px;">${REF_SIGIL[type]}</span>` +
+    `<span style="${half}background:${REF_BADGE_COLOR[type]};color:${COLOR.badgeTextOnLight};border-radius:0 3px 3px 0;">${escapeHtml(name)}</span>` +
     `</span>`
   );
 }

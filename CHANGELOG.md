@@ -11,6 +11,13 @@ Release notes.
 
 ## [Unreleased]
 
+### Fixed
+- Sidebar ref badges no longer render with the white sigil box taller than the
+  name beside it. The sigil needed `display:inline-block` for the fixed-width
+  field that lines `T` up under `RB`, and an inline-block box takes the whole
+  line height while a plain inline one takes only the font's content area — so
+  the two halves of the same badge disagreed. Both halves now share one box.
+
 ## [0.6.0] - 2026-08-27
 
 ### Added
