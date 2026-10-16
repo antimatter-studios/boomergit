@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { parseGitLog } from "./git/parser.js";
+import { filterIgnoredRefCommits, parseGitLog } from "./git/parser.js";
 import { gitRun, gitQuery, gitQueryTrimmed } from "./git/exec.js";
 import { localBranchName } from "./git/types.js";
 import { TIMING } from "./ui/timings.js";
@@ -17,6 +17,7 @@ import { ChangedFilesProvider } from "./providers/changedFilesProvider.js";
 import type { ChangedFile } from "./providers/changedFilesProvider.js";
 import { GitFileContentProvider, FILE_SCHEME, fileUri } from "./providers/gitFileContentProvider.js";
 import { WorktreesProvider } from "./providers/worktreesProvider.js";
+import { IgnoredRefsProvider } from "./providers/ignoredRefsProvider.js";
 import {
   listWorktrees,
   resolveWorktreePath,
@@ -115,6 +116,39 @@ export function activate(context: vscode.ExtensionContext) {
     treeDataProvider: changedFilesProvider,
     showCollapseAll: true,
   });
+  const ignoredRefsProvider = new IgnoredRefsProvider(() =>
+    vscode.workspace.getConfiguration("boomergit").get<string[]>("ignoredRefPatterns", [])
+  );
+  const ignoredRefsView = vscode.window.createTreeView("boomergit.ignoredRefs", {
+    treeDataProvider: ignoredRefsProvider,
+  });
+
+  const addIgnoredRefCmd = vscode.commands.registerCommand("boomergit.addIgnoredRef", async () => {
+    const pattern = await vscode.window.showInputBox({
+      title: "Ignore Refs",
+      prompt: "Regular expression matched against a ref path, name, or type",
+      placeHolder: "refs/heads/t3code/checkpoint/.*",
+      validateInput: (value) => {
+        if (!value) return "Enter a regular expression";
+        try { new RegExp(value); return undefined; }
+        catch (err) { return err instanceof Error ? err.message : "Invalid regular expression"; }
+      },
+    });
+    if (!pattern) return;
+    const config = vscode.workspace.getConfiguration("boomergit");
+    const patterns = config.get<string[]>("ignoredRefPatterns", []);
+    if (patterns.includes(pattern)) return;
+    await config.update("ignoredRefPatterns", [...patterns, pattern], vscode.ConfigurationTarget.Global);
+  });
+  const removeIgnoredRefCmd = vscode.commands.registerCommand("boomergit.removeIgnoredRef", async (pattern?: string) => {
+    const config = vscode.workspace.getConfiguration("boomergit");
+    const patterns = config.get<string[]>("ignoredRefPatterns", []);
+    if (!pattern) {
+      pattern = await vscode.window.showQuickPick(patterns, { title: "Remove Ignore Ref Pattern" });
+    }
+    if (!pattern) return;
+    await config.update("ignoredRefPatterns", patterns.filter((item) => item !== pattern), vscode.ConfigurationTarget.Global);
+  });
 
   const providerReg = vscode.workspace.registerTextDocumentContentProvider(
     SCHEME,
@@ -140,6 +174,7 @@ export function activate(context: vscode.ExtensionContext) {
   // views that are visible in that state — this is what lets the sidebar icon
   // reopen the graph after the editor tab was closed.
   changedFilesView.onDidChangeVisibility((e) => maybeReopenGraph(e.visible));
+  ignoredRefsView.onDidChangeVisibility((e) => maybeReopenGraph(e.visible));
   worktreesView.onDidChangeVisibility((e) => maybeReopenGraph(e.visible));
 
   let decorationEngine: GraphDecorationEngine | undefined;
@@ -369,11 +404,11 @@ export function activate(context: vscode.ExtensionContext) {
 
       currentBranch = await gitQueryTrimmed(["rev-parse", "--abbrev-ref", "HEAD"], workspaceCwd);
 
-      const [commits, allWorktrees] = await Promise.all([
+      const [parsedCommits, allWorktrees] = await Promise.all([
         parseGitLog(workspaceCwd),
         listWorktrees(workspaceCwd),
       ]);
-      if (commits.length === 0) {
+      if (parsedCommits.length === 0) {
         // An empty repository, or a git that returned nothing. Silent on a
         // background refresh, but an explicit open must say why it opened
         // nothing rather than appearing to have ignored the click.
@@ -384,6 +419,8 @@ export function activate(context: vscode.ExtensionContext) {
         }
         return;
       }
+      const ignorePatterns = vscode.workspace.getConfiguration("boomergit").get<string[]>("ignoredRefPatterns", []);
+      const commits = filterIgnoredRefCommits(parsedCommits, ignorePatterns);
 
       worktrees = allWorktrees;
       worktreesProvider.setWorktrees(allWorktrees);
@@ -760,6 +797,10 @@ export function activate(context: vscode.ExtensionContext) {
       autoRefreshEnabled = vscode.workspace.getConfiguration("boomergit").get<boolean>("autoRefresh", false);
       updateStatusBar();
     }
+    if (e.affectsConfiguration("boomergit.ignoredRefPatterns") && workspaceCwd) {
+      ignoredRefsProvider.refresh();
+      void refreshGraph({ preserveView: true });
+    }
   });
 
   // A cheap signature of all ref OIDs + HEAD. Refs cover commits/rebase/fetch/
@@ -883,7 +924,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     providerReg, fileProviderReg, sidebarView, showGraphCmd, checkoutRefCmd, deleteBranchCmd, createBranchCmd, copyTextCmd, hoverProvider, selectionWatcher,
-    commitInfoReg, changedFilesView, worktreesView, selectUpCmd, selectDownCmd, openFileDiffCmd, visibleEditorsWatcher, tabCloseWatcher,
+    commitInfoReg, changedFilesView, worktreesView, ignoredRefsView, addIgnoredRefCmd, removeIgnoredRefCmd, selectUpCmd, selectDownCmd, openFileDiffCmd, visibleEditorsWatcher, tabCloseWatcher,
     refreshCmd, toggleAutoRefreshCmd, configWatcher, statusBar,
     revealWorktreeCmd, openWorktreeCmd, copyWorktreePathCmd, createWorktreeCmd,
     { dispose: () => { if (autoRefreshTimer) clearInterval(autoRefreshTimer); gitStateSub?.dispose(); openRepoSub?.dispose(); decorationEngine?.dispose(); } },

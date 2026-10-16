@@ -28,6 +28,50 @@ export async function parseGitLog(cwd: string): Promise<Commit[]> {
   return parseLogOutput(stdout);
 }
 
+/** Remove commits carrying at least one ref matched by an ignore expression. */
+export function filterIgnoredRefCommits(commits: Commit[], patterns: string[]): Commit[] {
+  const expressions = patterns.flatMap((pattern) => {
+    try {
+      return [new RegExp(pattern)];
+    } catch {
+      return [];
+    }
+  });
+  if (expressions.length === 0) return commits;
+  const visible = commits.filter((commit) =>
+    !commit.refs.some((ref) => {
+      const candidates = [ref.full, ref.name, ref.type].filter((value): value is string => !!value);
+      return expressions.some((expression) => candidates.some((value) => {
+        expression.lastIndex = 0;
+        return expression.test(value);
+      }));
+    })
+  );
+  const visibleHashes = new Set(visible.map((commit) => commit.hash));
+  const byHash = new Map(commits.map((commit) => [commit.hash, commit]));
+
+  // Replace paths through hidden commits with their nearest visible ancestors.
+  // The graph layout can then draw uninterrupted lanes across omitted rows.
+  function visibleParents(hash: string, seen = new Set<string>()): string[] {
+    if (visibleHashes.has(hash)) return [hash];
+    if (seen.has(hash)) return [];
+    seen.add(hash);
+    const hidden = byHash.get(hash);
+    if (!hidden) return [];
+    const result: string[] = [];
+    for (const parent of hidden.parents) {
+      for (const ancestor of visibleParents(parent, new Set(seen))) {
+        if (!result.includes(ancestor)) result.push(ancestor);
+      }
+    }
+    return result;
+  }
+  return visible.map((commit) => ({
+    ...commit,
+    parents: commit.parents.flatMap((parent) => visibleParents(parent)),
+  }));
+}
+
 export function parseLogOutput(output: string): Commit[] {
   const commits: Commit[] = [];
   for (const line of output.split("\n")) {

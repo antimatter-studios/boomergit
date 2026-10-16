@@ -60,6 +60,12 @@
           "id": "boomergit.changedFiles",
           "name": "Changed Files",
           "when": "boomergit:graphOpen"
+        },
+        {
+          "id": "boomergit.ignoredRefs",
+          "name": "Ignore Refs",
+          "when": "boomergit:graphOpen",
+          "collapsed": true
         }
       ]
     },
@@ -126,6 +132,15 @@
         "title": "Copy Worktree Path"
       },
       {
+        "command": "boomergit.addIgnoredRef",
+        "title": "BoomerGit: Ignore Ref Pattern",
+        "icon": "$(add)"
+      },
+      {
+        "command": "boomergit.removeIgnoredRef",
+        "title": "Remove Ignore Ref Pattern"
+      },
+      {
         "command": "boomergit.createWorktree",
         "title": "Create Worktree from Branch"
       }
@@ -182,9 +197,22 @@
         {
           "command": "boomergit.createWorktree",
           "when": "false"
+        },
+        {
+          "command": "boomergit.addIgnoredRef",
+          "when": "false"
+        },
+        {
+          "command": "boomergit.removeIgnoredRef",
+          "when": "false"
         }
       ],
       "view/item/context": [
+        {
+          "command": "boomergit.removeIgnoredRef",
+          "when": "view == boomergit.ignoredRefs && viewItem == ignoredRef",
+          "group": "1_remove"
+        },
         {
           "command": "boomergit.openWorktree",
           "when": "view == boomergit.worktrees && viewItem == worktree",
@@ -194,6 +222,13 @@
           "command": "boomergit.copyWorktreePath",
           "when": "view == boomergit.worktrees",
           "group": "1_copy"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "boomergit.addIgnoredRef",
+          "when": "view == boomergit.ignoredRefs",
+          "group": "navigation"
         }
       ]
     },
@@ -233,6 +268,12 @@
           "type": "boolean",
           "default": false,
           "description": "Automatically refresh the graph when the repository's refs change (watches .git). Toggle from the status bar while the graph is open."
+        },
+        "boomergit.ignoredRefPatterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "markdownDescription": "Regular expressions tested against each ref's full Git path (for example `refs/heads/t3code/checkpoint/.*`), short name, and type. A commit is hidden when any attached ref matches. The graph reconnects visible commits through hidden ancestors so its branch and merge lines remain continuous. Invalid expressions are ignored."
         },
         "boomergit.worktrees.location": {
           "type": "string",
